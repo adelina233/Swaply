@@ -30,9 +30,24 @@ const UI_COLORS = {
     description: '#4A5568',
     subText: '#718096',
     white: '#FFFFFF',
+    bookedText: '#c0392b',
+    bookedDot: '#e74c3c',
 };
 
 const CURRENCIES = ['RON', 'EUR', 'USD'];
+
+// Randare custom pentru ziua de calendar
+const renderBookedDay = (date: any, state: string, isBooked: boolean, isSelected: boolean) => {
+    if (isBooked) {
+        return (
+            <View style={customDayStyles.bookedContainer}>
+                <Text style={customDayStyles.bookedText}>{date.day}</Text>
+                <View style={customDayStyles.bookedDot} />
+            </View>
+        );
+    }
+    return null; // folosim renderul default
+};
 
 export default function CreateOfferScreen() {
     const { targetId } = useLocalSearchParams();
@@ -40,7 +55,6 @@ export default function CreateOfferScreen() {
     
     const [targetApartment, setTargetApartment] = useState<any>(null);
     const [myApartment, setMyApartment] = useState<any>(null);
-    // ✅ NOU: lista tuturor apartamentelor tale
     const [myApartments, setMyApartments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
@@ -49,6 +63,8 @@ export default function CreateOfferScreen() {
     const [guarantee, setGuarantee] = useState('500');
     const [currency, setCurrency] = useState('RON');
     const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+
+    const [bookedDates, setBookedDates] = useState<{[key: string]: any}>({});
 
     const [weatherInsight, setWeatherInsight] = useState<string | null>(null);
     const [displayText, setDisplayText] = useState(""); 
@@ -99,16 +115,70 @@ export default function CreateOfferScreen() {
                         ownerName: ownerData?.firstName || "Proprietar",
                         ownerPhoto: ownerData?.profileImage || null
                     });
+
+                    const blocked: {[key: string]: any} = {};
+
+                    const swapQueryNew = query(
+                        collection(db, "swap_requests"),
+                        where("targetApartmentId", "==", targetId as string),
+                        where("status", "in", ["pending", "accepted"])
+                    );
+                    const swapSnapNew = await getDocs(swapQueryNew);
+
+                    const swapQueryOld = query(
+                        collection(db, "swap_requests"),
+                        where("ownerId", "==", aptData.userId),
+                        where("status", "in", ["pending", "accepted"])
+                    );
+                    const swapSnapOld = await getDocs(swapQueryOld);
+
+                    const allDocs = new Map<string, any>();
+                    swapSnapNew.docs.forEach(d => allDocs.set(d.id, d.data()));
+                    swapSnapOld.docs.forEach(d => allDocs.set(d.id, d.data()));
+
+                    allDocs.forEach((data) => {
+                        const periodStr: string = data.swapPeriod || "";
+                        const [startStr, endStr] = periodStr.split(" -> ");
+                        if (!startStr || !endStr) return;
+
+                        const start = new Date(startStr);
+                        const end = new Date(endStr);
+                        const current = new Date(start);
+
+                        while (current <= end) {
+                            const dateStr = current.toISOString().split('T')[0];
+                            // ✅ customStyles pentru aspect estetic
+                            blocked[dateStr] = {
+                                disabled: true,
+                                disableTouchEvent: true,
+                                customStyles: {
+                                    container: {
+                                        backgroundColor: 'transparent',
+                                        borderRadius: 8,
+                                    },
+                                    text: {
+                                        color: '#e57373',
+                                        fontFamily: 'Poppins_400Regular',
+                                        textDecorationLine: 'line-through',
+                                        opacity: 0.7,
+                                    },
+                                },
+                            };
+                            current.setDate(current.getDate() + 1);
+                        }
+                    });
+
+                    setBookedDates(blocked);
                 }
 
-                // ✅ FIX: încărcăm TOATE apartamentele tale, nu doar primul
                 const myAdsQuery = query(collection(db, "apartments"), where("userId", "==", auth.currentUser?.uid));
                 const myAdsSnap = await getDocs(myAdsQuery);
                 if (!myAdsSnap.empty) {
                     const allMyApts = myAdsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                     setMyApartments(allMyApts);
-                    setMyApartment(allMyApts[0]); // default: primul
+                    setMyApartment(allMyApts[0]);
                 }
+
             } catch (error) {
                 console.error("Eroare fetching data: ", error);
             } finally {
@@ -157,11 +227,42 @@ export default function CreateOfferScreen() {
     };
 
     const onDayPress = (day: any) => {
+        if (bookedDates[day.dateString]) {
+            Alert.alert("Zi indisponibilă", "Această zi este deja rezervată de altcineva.");
+            return;
+        }
+
         if (!range.start || (range.start && range.end)) {
             setRange({ start: day.dateString, end: '' });
             setWeatherInsight(null);
             setDisplayText("");
         } else {
+            const start = new Date(range.start);
+            const end = new Date(day.dateString);
+
+            if (end < start) {
+                setRange({ start: day.dateString, end: '' });
+                return;
+            }
+
+            let hasConflict = false;
+            const check = new Date(start);
+            while (check <= end) {
+                if (bookedDates[check.toISOString().split('T')[0]]) {
+                    hasConflict = true;
+                    break;
+                }
+                check.setDate(check.getDate() + 1);
+            }
+
+            if (hasConflict) {
+                Alert.alert(
+                    "Perioadă indisponibilă",
+                    "Intervalul selectat include zile deja rezervate. Te rugăm să alegi altă perioadă."
+                );
+                return;
+            }
+
             const newRange = { start: range.start, end: day.dateString };
             setRange(newRange);
             
@@ -174,6 +275,93 @@ export default function CreateOfferScreen() {
                 fetchPredictiveWeather(lat, lon, cityToSearch, range.start, day.dateString);
             }
         }
+    };
+
+    // ✅ markingType='custom' pentru zilele bookuite, 'period' pentru selecție
+    // Le combinăm: zilele bookuite au customStyles, zilele selectate au period marking
+    const buildMarkedDates = () => {
+        // Pornim de la bookedDates (care au customStyles + disabled)
+        const marked: {[key: string]: any} = {};
+
+        // Adăugăm zilele bookuite
+        Object.keys(bookedDates).forEach(dateStr => {
+            marked[dateStr] = { ...bookedDates[dateStr] };
+        });
+
+        // Suprapunem selectia curenta (override peste booked daca e cazul)
+        if (range.start) {
+            if (range.end) {
+                const start = new Date(range.start);
+                const end = new Date(range.end);
+                const current = new Date(start);
+
+                while (current <= end) {
+                    const dateStr = current.toISOString().split('T')[0];
+                    if (!bookedDates[dateStr]) {
+                        if (dateStr === range.start) {
+                            marked[dateStr] = { startingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' };
+                        } else if (dateStr === range.end) {
+                            marked[dateStr] = { endingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' };
+                        } else {
+                            marked[dateStr] = { color: 'rgba(77, 171, 247, 0.25)', textColor: UI_COLORS.brandSky };
+                        }
+                    }
+                    current.setDate(current.getDate() + 1);
+                }
+            } else {
+                if (!bookedDates[range.start]) {
+                    marked[range.start] = { startingDay: true, endingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' };
+                }
+            }
+        }
+
+        return marked;
+    };
+
+    
+    const buildMarkedDatesPeriod = () => {
+        const marked: {[key: string]: any} = {};
+
+        // Zilele bookuite 
+        Object.keys(bookedDates).forEach(dateStr => {
+            marked[dateStr] = {
+                disabled: true,
+                disableTouchEvent: true,
+                startingDay: true,
+                endingDay: true,
+                color: 'rgba(229, 115, 115, 0.15)',   // roz pal, aproape invizibil
+                textColor: '#e57373',                   // roșu pastelat
+            };
+        });
+
+        // Selecția curentă — albastru viu
+        if (range.start) {
+            if (range.end) {
+                const start = new Date(range.start);
+                const end = new Date(range.end);
+                const current = new Date(start);
+
+                while (current <= end) {
+                    const dateStr = current.toISOString().split('T')[0];
+                    if (!bookedDates[dateStr]) {
+                        if (dateStr === range.start) {
+                            marked[dateStr] = { startingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' };
+                        } else if (dateStr === range.end) {
+                            marked[dateStr] = { endingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' };
+                        } else {
+                            marked[dateStr] = { color: 'rgba(77, 171, 247, 0.22)', textColor: UI_COLORS.brandSky };
+                        }
+                    }
+                    current.setDate(current.getDate() + 1);
+                }
+            } else {
+                if (!bookedDates[range.start]) {
+                    marked[range.start] = { startingDay: true, endingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' };
+                }
+            }
+        }
+
+        return marked;
     };
 
     const handleConfirmOffer = async () => {
@@ -189,20 +377,19 @@ export default function CreateOfferScreen() {
             const myProfileSnap = await getDoc(myProfileRef);
             const myData = myProfileSnap.data();
 
-            // ✅ FIX: pozele corecte pentru fiecare parte
-            const myApartmentImage = myApartment?.images?.[0] || null;       // poza apartamentului TĂU (ce oferi)
-            const targetApartmentImage = targetApartment?.images?.[0] || null; // poza apartamentului DESTINAȚIE
+            const myApartmentImage = myApartment?.images?.[0] || null;
+            const targetApartmentImage = targetApartment?.images?.[0] || null;
 
             await addDoc(collection(db, "swap_requests"), {
                 ownerId: targetApartment.userId,
                 ownerName: targetApartment.ownerName,
                 ownerPhoto: targetApartment.ownerPhoto, 
                 targetApartmentTitle: targetApartment.title || "Apartament",
-                
-                // ✅ FIX: câmpurile de imagini sunt acum corecte
-                apartmentImage: targetApartmentImage,       // poza apartamentului destinație (cel al owner-ului)
-                ownerApartmentImage: myApartmentImage,      // ✅ CORECTAT: poza apartamentului TĂU (ce oferi tu owner-ului)
-                senderApartmentImage: myApartmentImage,     // poza apartamentului tău (consistent)
+                targetApartmentId: targetId,
+
+                apartmentImage: targetApartmentImage,
+                ownerApartmentImage: myApartmentImage,
+                senderApartmentImage: myApartmentImage,
 
                 senderId: user?.uid,
                 senderName: myData?.firstName || "Utilizator",
@@ -228,6 +415,8 @@ export default function CreateOfferScreen() {
 
     if (loading || !fontsLoaded) return <View style={styles.loading}><ActivityIndicator color={UI_COLORS.brandSky} size="large" /></View>;
 
+    const hasBookedDates = Object.keys(bookedDates).length > 0;
+
     return (
         <View style={styles.container}>
             <LinearGradient colors={['#FFDEE9', '#B5FFFC', '#E0C3FC']} style={styles.background} />
@@ -243,13 +432,11 @@ export default function CreateOfferScreen() {
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                     
-                    {/* ✅ NOU: Caseta de comparație cu selector de apartament */}
                     <View style={styles.comparisonCard}>
                         <View style={styles.homeBox}>
                             <Image source={{ uri: myApartment?.images?.[0] }} style={styles.miniImg} />
                             <Text style={styles.homeLabel}>Tu oferi</Text>
 
-                            {/* ✅ NOU: Selector vizual dacă ai mai multe apartamente */}
                             {myApartments.length > 1 && (
                                 <ScrollView
                                     horizontal
@@ -306,13 +493,28 @@ export default function CreateOfferScreen() {
                                 textDayFontFamily: 'Poppins_400Regular',
                                 textMonthFontFamily: 'Poppins_700Bold',
                                 arrowColor: UI_COLORS.brandSky,
+                                // ✅ zilele disabled au text mai pal implicit
+                                textDisabledColor: '#e57373',
                             }}
-                            markedDates={{
-                                [range.start]: { startingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' },
-                                [range.end]: { endingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' },
-                            }}
+                            markedDates={buildMarkedDatesPeriod()}
                         />
                     </BlurView>
+
+                    {/* ✅ Legendă — apare doar dacă există zile bookuite */}
+                    {hasBookedDates && (
+                        <View style={styles.legendRow}>
+                            <View style={styles.legendItem}>
+                                <View style={styles.legendDotBooked} />
+                                <Text style={styles.legendText}>Rezervat</Text>
+                            </View>
+                            <View style={styles.legendDivider} />
+                            <View style={styles.legendItem}>
+                                <View style={styles.legendDotSelected} />
+                                <Text style={styles.legendText}>Selecția ta</Text>
+                            </View>
+
+                        </View>
+                    )}
 
                     {loadingAI && (
                         <View style={styles.aiLoading}>
@@ -376,6 +578,30 @@ export default function CreateOfferScreen() {
     );
 }
 
+const customDayStyles = StyleSheet.create({
+    bookedContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 32,
+        height: 32,
+    },
+    bookedText: {
+        fontSize: 13,
+        color: '#e57373',
+        opacity: 0.6,
+        textDecorationLine: 'line-through',
+        fontFamily: 'Poppins_400Regular',
+    },
+    bookedDot: {
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#e57373',
+        opacity: 0.5,
+        marginTop: 1,
+    },
+});
+
 const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { ...StyleSheet.absoluteFillObject },
@@ -390,6 +616,44 @@ const styles = StyleSheet.create({
     homeLabel: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, color: UI_COLORS.description },
     sectionTitle: { fontFamily: 'Poppins_700Bold', fontSize: 16, color: UI_COLORS.brandSky, marginBottom: 15 },
     calendarWrapper: { borderRadius: 25, overflow: 'hidden', padding: 10, backgroundColor: 'rgba(255,255,255,0.2)' },
+    // ✅ Legendă nouă
+    legendRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        marginTop: 14,
+        marginBottom: 4,
+        backgroundColor: 'rgba(255,255,255,0.35)',
+        paddingVertical: 10,
+        paddingHorizontal: 18,
+        borderRadius: 20,
+    },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    legendDivider: { width: 1, height: 14, backgroundColor: 'rgba(0,0,0,0.1)' },
+    legendDotBooked: {
+        width: 10,
+        height: 10,
+        borderRadius: 3,
+        backgroundColor: 'rgba(229, 115, 115, 0.5)',
+        borderWidth: 1,
+        borderColor: '#e57373',
+    },
+    legendDotSelected: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: UI_COLORS.brandSky,
+    },
+    legendDotFree: {
+        width: 10,
+        height: 10,
+        borderRadius: 3,
+        backgroundColor: 'rgba(77, 171, 247, 0.2)',
+        borderWidth: 1,
+        borderColor: 'rgba(77, 171, 247, 0.4)',
+    },
+    legendText: { fontFamily: 'Poppins_400Regular', fontSize: 11, color: UI_COLORS.subText },
     aiLoading: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 15, justifyContent: 'center' },
     aiText: { fontFamily: 'Poppins_400Regular', fontSize: 12, color: UI_COLORS.brandSky },
     aiInsightCard: { marginTop: 20, padding: 18, borderRadius: 25, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.5)' },
@@ -409,8 +673,6 @@ const styles = StyleSheet.create({
     modalContent: { width: 200, borderRadius: 25, overflow: 'hidden', padding: 10 },
     currencyOption: { paddingVertical: 15, alignItems: 'center' },
     optionText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 18 },
-
-    // ✅ NOU: stiluri pentru selectorul de apartamente
     aptSelectorScroll: { marginTop: 10, width: '100%' },
     aptSelectorContent: { gap: 8, paddingHorizontal: 4 },
     aptThumb: {
