@@ -46,7 +46,7 @@ const renderBookedDay = (date: any, state: string, isBooked: boolean, isSelected
             </View>
         );
     }
-    return null; // folosim renderul default
+    return null; //renderul default
 };
 
 export default function CreateOfferScreen() {
@@ -118,25 +118,15 @@ export default function CreateOfferScreen() {
 
                     const blocked: {[key: string]: any} = {};
 
-                    const swapQueryNew = query(
+                    const swapQuery = query(
                         collection(db, "swap_requests"),
                         where("targetApartmentId", "==", targetId as string),
                         where("status", "in", ["pending", "accepted"])
                     );
-                    const swapSnapNew = await getDocs(swapQueryNew);
+                    const swapSnap = await getDocs(swapQuery);
 
-                    const swapQueryOld = query(
-                        collection(db, "swap_requests"),
-                        where("ownerId", "==", aptData.userId),
-                        where("status", "in", ["pending", "accepted"])
-                    );
-                    const swapSnapOld = await getDocs(swapQueryOld);
-
-                    const allDocs = new Map<string, any>();
-                    swapSnapNew.docs.forEach(d => allDocs.set(d.id, d.data()));
-                    swapSnapOld.docs.forEach(d => allDocs.set(d.id, d.data()));
-
-                    allDocs.forEach((data) => {
+                    swapSnap.docs.forEach((docSnap) => {
+                        const data = docSnap.data();
                         const periodStr: string = data.swapPeriod || "";
                         const [startStr, endStr] = periodStr.split(" -> ");
                         if (!startStr || !endStr) return;
@@ -147,20 +137,21 @@ export default function CreateOfferScreen() {
 
                         while (current <= end) {
                             const dateStr = current.toISOString().split('T')[0];
-                            // ✅ customStyles pentru aspect estetic
+                        
                             blocked[dateStr] = {
                                 disabled: true,
                                 disableTouchEvent: true,
+                                marked: true,
+                                dotColor: '#e57373',
                                 customStyles: {
                                     container: {
-                                        backgroundColor: 'transparent',
-                                        borderRadius: 8,
+                                        backgroundColor: 'rgba(229,115,115,0.12)',
+                                        borderRadius: 18,
                                     },
                                     text: {
                                         color: '#e57373',
-                                        fontFamily: 'Poppins_400Regular',
                                         textDecorationLine: 'line-through',
-                                        opacity: 0.7,
+                                        opacity: 0.75,
                                     },
                                 },
                             };
@@ -277,18 +268,69 @@ export default function CreateOfferScreen() {
         }
     };
 
-    // ✅ markingType='custom' pentru zilele bookuite, 'period' pentru selecție
-    // Le combinăm: zilele bookuite au customStyles, zilele selectate au period marking
-    const buildMarkedDates = () => {
-        // Pornim de la bookedDates (care au customStyles + disabled)
+    
+    const buildMarkedDatesCustom = () => {
         const marked: {[key: string]: any} = {};
 
-        // Adăugăm zilele bookuite
+        // Zilele bookuite — text tăiat + bilută roșie
         Object.keys(bookedDates).forEach(dateStr => {
             marked[dateStr] = { ...bookedDates[dateStr] };
         });
 
-        // Suprapunem selectia curenta (override peste booked daca e cazul)
+       
+        if (range.start) {
+            if (range.end) {
+                const start = new Date(range.start);
+                const end = new Date(range.end);
+                const current = new Date(start);
+
+                while (current <= end) {
+                    const dateStr = current.toISOString().split('T')[0];
+                    if (!bookedDates[dateStr]) {
+                        const isStart = dateStr === range.start;
+                        const isEnd = dateStr === range.end;
+                        marked[dateStr] = {
+                            customStyles: {
+                                container: {
+                                    backgroundColor: (isStart || isEnd) ? UI_COLORS.brandSky : 'rgba(77,171,247,0.25)',
+                                    borderTopLeftRadius: isStart ? 18 : 0,
+                                    borderBottomLeftRadius: isStart ? 18 : 0,
+                                    borderTopRightRadius: isEnd ? 18 : 0,
+                                    borderBottomRightRadius: isEnd ? 18 : 0,
+                                    borderRadius: (isStart && isEnd) ? 18 : undefined,
+                                },
+                                text: {
+                                    color: (isStart || isEnd) ? '#FFF' : UI_COLORS.brandSky,
+                                    fontFamily: 'Poppins_600SemiBold',
+                                },
+                            },
+                        };
+                    }
+                    current.setDate(current.getDate() + 1);
+                }
+            } else {
+                if (!bookedDates[range.start]) {
+                    marked[range.start] = {
+                        customStyles: {
+                            container: { backgroundColor: UI_COLORS.brandSky, borderRadius: 18 },
+                            text: { color: '#FFF', fontFamily: 'Poppins_600SemiBold' },
+                        },
+                    };
+                }
+            }
+        }
+
+        return marked;
+    };
+
+  
+    const buildMarkedDates = () => {
+        const marked: {[key: string]: any} = {};
+
+        Object.keys(bookedDates).forEach(dateStr => {
+            marked[dateStr] = { ...bookedDates[dateStr] };
+        });
+
         if (range.start) {
             if (range.end) {
                 const start = new Date(range.start);
@@ -322,19 +364,17 @@ export default function CreateOfferScreen() {
     const buildMarkedDatesPeriod = () => {
         const marked: {[key: string]: any} = {};
 
-        // Zilele bookuite 
         Object.keys(bookedDates).forEach(dateStr => {
             marked[dateStr] = {
                 disabled: true,
                 disableTouchEvent: true,
                 startingDay: true,
                 endingDay: true,
-                color: 'rgba(229, 115, 115, 0.15)',   // roz pal, aproape invizibil
-                textColor: '#e57373',                   // roșu pastelat
+                color: 'rgba(229, 115, 115, 0.15)',
+                textColor: '#e57373',
             };
         });
 
-        // Selecția curentă — albastru viu
         if (range.start) {
             if (range.end) {
                 const start = new Date(range.start);
@@ -380,12 +420,23 @@ export default function CreateOfferScreen() {
             const myApartmentImage = myApartment?.images?.[0] || null;
             const targetApartmentImage = targetApartment?.images?.[0] || null;
 
+            const extractCity = (address: string) => {
+                if (!address) return "";
+                const parts = address.split(',');
+                return parts[parts.length - 1].trim();
+            };
+            const targetCity = extractCity(targetApartment?.addressInput || "") || targetApartment?.city || "";
+            const senderCity = extractCity(myApartment?.addressInput || "") || myApartment?.city || "";
+
             await addDoc(collection(db, "swap_requests"), {
                 ownerId: targetApartment.userId,
                 ownerName: targetApartment.ownerName,
-                ownerPhoto: targetApartment.ownerPhoto, 
+                ownerPhoto: targetApartment.ownerPhoto,
                 targetApartmentTitle: targetApartment.title || "Apartament",
                 targetApartmentId: targetId,
+
+                targetCity,
+                senderCity,
 
                 apartmentImage: targetApartmentImage,
                 ownerApartmentImage: myApartmentImage,
@@ -396,7 +447,7 @@ export default function CreateOfferScreen() {
                 senderPhoto: myData?.profileImage || null,
                 senderApartmentId: myApartment.id,
                 senderApartmentTitle: myApartment?.title || "Apartamentul meu",
-                
+
                 status: 'pending',
                 swapPeriod: `${range.start} -> ${range.end}`,
                 proposedGuarantee: parseInt(guarantee),
@@ -483,24 +534,19 @@ export default function CreateOfferScreen() {
                     <BlurView intensity={40} tint="light" style={styles.calendarWrapper}>
                         <Calendar
                             onDayPress={onDayPress}
-                            markingType={'period'}
+                            markingType={'custom'}
                             theme={{
                                 calendarBackground: 'transparent',
                                 textSectionTitleColor: UI_COLORS.brandSky,
                                 todayTextColor: UI_COLORS.brandSky,
-                                selectedDayBackgroundColor: UI_COLORS.brandSky,
-                                selectedDayTextColor: '#ffffff',
                                 textDayFontFamily: 'Poppins_400Regular',
                                 textMonthFontFamily: 'Poppins_700Bold',
                                 arrowColor: UI_COLORS.brandSky,
-                                // ✅ zilele disabled au text mai pal implicit
-                                textDisabledColor: '#e57373',
                             }}
-                            markedDates={buildMarkedDatesPeriod()}
+                            markedDates={buildMarkedDatesCustom()}
                         />
                     </BlurView>
 
-                    {/* ✅ Legendă — apare doar dacă există zile bookuite */}
                     {hasBookedDates && (
                         <View style={styles.legendRow}>
                             <View style={styles.legendItem}>
@@ -512,7 +558,6 @@ export default function CreateOfferScreen() {
                                 <View style={styles.legendDotSelected} />
                                 <Text style={styles.legendText}>Selecția ta</Text>
                             </View>
-
                         </View>
                     )}
 
@@ -616,7 +661,6 @@ const styles = StyleSheet.create({
     homeLabel: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, color: UI_COLORS.description },
     sectionTitle: { fontFamily: 'Poppins_700Bold', fontSize: 16, color: UI_COLORS.brandSky, marginBottom: 15 },
     calendarWrapper: { borderRadius: 25, overflow: 'hidden', padding: 10, backgroundColor: 'rgba(255,255,255,0.2)' },
-    // ✅ Legendă nouă
     legendRow: {
         flexDirection: 'row',
         alignItems: 'center',

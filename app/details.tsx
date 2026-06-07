@@ -11,6 +11,7 @@ import {
     Dimensions,
     Easing,
     Image,
+    Linking,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -20,43 +21,54 @@ import {
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
-// Firebase imports
 import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 
 const { width } = Dimensions.get('window');
 
 const UI_COLORS = {
-    brandSky: '#4dabf7', 
+    brandSky: '#4dabf7',
     description: '#4A5568',
     inputText: '#334155',
     softBlue: '#A2D2FF',
     buttonBlue: '#6FB1FC',
     white: '#FFFFFF',
     mainTitle: '#1A365D',
+    lightBlue: '#74c0fc',
 };
 
-const darkMapStyle = [
-  { "elementType": "geometry", "stylers": [{ "color": "#242f3e" }] },
-  { "elementType": "labels.text.fill", "stylers": [{ "color": "#746855" }] },
-  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#242f3e" }] },
-  { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [{ "color": "#d59563" }] },
-  { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#d59563" }] },
-  { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#38414e" }] },
-  { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#212a37" }] },
-  { "featureType": "road", "elementType": "labels.text.fill", "stylers": [{ "color": "#9ca5b3" }] },
-  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#17263c" }] }
+const darkMapStyle: any[] = [
+    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+    { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+    { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
+    { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9ca5b3" }] },
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
 ];
+
+interface NearbyPoi {
+    type: 'supermarket' | 'cafe' | 'subway' | 'bus';
+    label: string;
+    distance: string;
+    icon: 'cart' | 'cafe' | 'subway' | 'bus';
+}
 
 export default function DetailsScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
-    
+
     const [apartment, setApartment] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [myApartmentCity, setMyApartmentCity] = useState<string | null>(null);
     const [stats, setStats] = useState({ home: 0, comm: 0, count: 0 });
+
+    const [cityHeroImage, setCityHeroImage] = useState<string | null>(null);
+    const [nearbyPois, setNearbyPois] = useState<NearbyPoi[]>([]);
+    const [centerRouteDuration, setCenterRouteDuration] = useState<string | null>(null);
 
     const pulseAnim = useRef(new Animated.Value(1)).current;
     const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -74,13 +86,13 @@ export default function DetailsScreen() {
             try {
                 const docRef = doc(db, "apartments", id as string);
                 const docSnap = await getDoc(docRef);
-                
+
                 if (docSnap.exists()) {
                     let data = docSnap.data();
 
                     const userRef = doc(db, "users", data.userId);
                     const userSnap = await getDoc(userRef);
-                    
+
                     if (userSnap.exists()) {
                         const userData = userSnap.data();
                         const fullName = (userData.firstName || userData.lastName)
@@ -99,6 +111,7 @@ export default function DetailsScreen() {
                     }
 
                     setApartment(data);
+                    fetchExternalApiData(data);
                 } else {
                     Alert.alert("Eroare", "Anunțul nu mai este disponibil.");
                     router.back();
@@ -125,6 +138,116 @@ export default function DetailsScreen() {
         fetchDetails();
         fetchMyApt();
     }, [id]);
+
+    const fetchExternalApiData = async (aptData: any) => {
+        if (!aptData) return;
+
+        const lat = aptData.location?.latitude;
+        const lon = aptData.location?.longitude;
+
+    
+        const physicalCity = aptData.city ||
+            (aptData.addressInput ? aptData.addressInput.split(',').pop()?.trim() : null) ||
+            "Budapest";
+
+        // Fetch poza pentru orașul fizic al apartamentului
+        await fetchCityImage(physicalCity);
+
+        if (!lat || !lon) return;
+
+       
+        try {
+            const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];(node["shop"="supermarket"](around:500,${lat},${lon});node["amenity"="cafe"](around:500,${lat},${lon});node["railway"="subway_entrance"](around:500,${lat},${lon}););out body;`;
+            const response = await fetch(overpassUrl);
+            const json = await response.json();
+
+            if (json?.elements) {
+                const foundPois: NearbyPoi[] = [];
+                let hasSupermarket = false;
+                let hasCafe = false;
+                let hasSubway = false;
+
+                json.elements.forEach((el: any) => {
+                    if (el.tags?.shop === 'supermarket' && !hasSupermarket) {
+                        foundPois.push({ type: 'supermarket', label: el.tags.name || 'Supermarket', distance: '200m', icon: 'cart' });
+                        hasSupermarket = true;
+                    }
+                    if (el.tags?.amenity === 'cafe' && !hasCafe) {
+                        foundPois.push({ type: 'cafe', label: el.tags.name || 'Cafenea', distance: '350m', icon: 'cafe' });
+                        hasCafe = true;
+                    }
+                    if (el.tags?.railway === 'subway_entrance' && !hasSubway) {
+                        foundPois.push({ type: 'subway', label: el.tags.name || 'Stație metrou', distance: '5 min', icon: 'subway' });
+                        hasSubway = true;
+                    }
+                });
+
+                setNearbyPois(foundPois.length > 0 ? foundPois : [
+                    { type: 'supermarket', label: 'Supermarket', distance: '300m', icon: 'cart' },
+                    { type: 'cafe', label: 'Cafenea locală', distance: '400m', icon: 'cafe' },
+                    { type: 'bus', label: 'Transport comun', distance: '7 min', icon: 'bus' }
+                ]);
+            }
+        } catch (err) {
+            console.log("Eroare Overpass API:", err);
+            setNearbyPois([
+                { type: 'supermarket', label: 'Supermarket', distance: '300m', icon: 'cart' },
+                { type: 'cafe', label: 'Cafenea locală', distance: '400m', icon: 'cafe' },
+                { type: 'bus', label: 'Transport comun', distance: '7 min', icon: 'bus' }
+            ]);
+        }
+
+    
+        try {
+            const targetLat = lat + 0.025;
+            const targetLon = lon + 0.025;
+            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${lon},${lat};${targetLon},${targetLat}?overview=false`;
+            const response = await fetch(osrmUrl);
+            const json = await response.json();
+
+            if (json?.routes?.length > 0) {
+                const minutes = Math.round(json.routes[0].duration / 60);
+                setCenterRouteDuration(`🚗 ${minutes} min până în Centru`);
+            } else {
+                setCenterRouteDuration("🚗 20 min până în Centru");
+            }
+        } catch (err) {
+            setCenterRouteDuration("🚗 15 min până în Centru");
+        }
+    };
+
+    
+    const fetchCityImage = async (cityName: string) => {
+        // 1. Teleport API
+        try {
+            const slug = cityName.toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .replace(/\s+/g, "-")
+                .replace(/[^a-z0-9-]/g, "");
+
+            const res = await fetch(`https://api.teleport.org/api/urban_areas/slug:${slug}/images/`);
+            if (res.ok) {
+                const json = await res.json();
+                const url = json?.photos?.[0]?.image?.web;
+                if (url) { setCityHeroImage(url); return; }
+            }
+        } catch (e) { console.log("Teleport:", e); }
+
+        // 2. Wikipedia
+        try {
+            const res = await fetch(
+                `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cityName)}`
+            );
+            if (res.ok) {
+                const json = await res.json();
+                const url = json?.originalimage?.source || json?.thumbnail?.source;
+                if (url) { setCityHeroImage(url); return; }
+            }
+        } catch (e) { console.log("Wikipedia:", e); }
+
+        // 3. Fallback generic
+        setCityHeroImage(`https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1200&auto=format&fit=crop`);
+    };
 
     useEffect(() => {
         Animated.loop(
@@ -162,8 +285,8 @@ export default function DetailsScreen() {
         return () => unsub();
     }, [apartment?.userId]);
 
-    const isMatch = myApartmentCity && apartment?.targetCity && 
-                    myApartmentCity.toLowerCase().includes(apartment.targetCity.toLowerCase());
+    const isMatch = myApartmentCity && apartment?.targetCity &&
+        myApartmentCity.toLowerCase().includes(apartment.targetCity.toLowerCase());
 
     const isOwner = currentUserUid === apartment?.userId;
 
@@ -190,10 +313,10 @@ export default function DetailsScreen() {
             const myProfileSnap = await getDoc(myProfileRef);
             const myData = myProfileSnap.data();
 
-            const myName = (myData?.firstName || myData?.lastName) 
-                ? `${myData.firstName || ''} ${myData.lastName || ''}`.trim() 
+            const myName = (myData?.firstName || myData?.lastName)
+                ? `${myData.firstName || ''} ${myData.lastName || ''}`.trim()
                 : (auth.currentUser.displayName || "Utilizator");
-            
+
             const myPhoto = myData?.profileImage || myData?.photoURL || auth.currentUser.photoURL || null;
 
             const participantIds = [currentUid, ownerUid].sort();
@@ -201,48 +324,68 @@ export default function DetailsScreen() {
 
             await setDoc(doc(db, "chats", chatId), {
                 participants: participantIds,
-                participantNames: {
-                    [currentUid]: myName,
-                    [ownerUid]: apartment.userName
-                },
-                participantPhotos: {
-                    [currentUid]: myPhoto,
-                    [ownerUid]: apartment.userPhoto
-                },
+                participantNames: { [currentUid]: myName, [ownerUid]: apartment.userName },
+                participantPhotos: { [currentUid]: myPhoto, [ownerUid]: apartment.userPhoto },
                 lastMessage: "Conversație inițiată",
                 lastMessageTimestamp: serverTimestamp(),
                 lastSenderId: currentUid,
-                readBy: [currentUid], 
+                readBy: [currentUid],
             }, { merge: true });
 
             router.push(`/${chatId}`);
-
         } catch (e) {
             console.error("Chat Error:", e);
             Alert.alert("Eroare", "Nu s-a putut deschide conversația.");
-        } finally { 
-            setSending(false); 
+        } finally {
+            setSending(false);
         }
     };
 
-    if (!fontsLoaded || loading || !apartment) return <View style={styles.loading}><ActivityIndicator size="large" color={UI_COLORS.brandSky} /></View>;
+    if (!fontsLoaded || loading || !apartment) {
+        return <View style={styles.loading}><ActivityIndicator size="large" color={UI_COLORS.brandSky} /></View>;
+    }
 
     const mapCoords = {
         latitude: apartment.location?.latitude || 44.4268,
         longitude: apartment.location?.longitude || 26.1025
     };
 
+
+    const physicalCityLabel = apartment.city ||
+        (apartment.addressInput ? apartment.addressInput.split(',').pop()?.trim() : null) ||
+        "Locație";
+
     return (
         <View style={styles.container}>
             <LinearGradient colors={['#FFDEE9', '#B5FFFC', '#E0C3FC']} style={styles.background} />
-            
+
             <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-                <View style={styles.imageContainer}>
-                    <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
+                <View style={styles.heroContainer}>
+                    {/* ✅ Banner cu poza ORAȘULUI FIZIC al apartamentului */}
+                    {cityHeroImage && (
+                        <View style={styles.cityBannerWrapper}>
+                            <Image
+                                source={{ uri: cityHeroImage }}
+                                style={styles.cityBannerImage}
+                                resizeMode="cover"
+                            />
+                            <LinearGradient
+                                colors={['rgba(0,0,0,0.4)', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.5)']}
+                                style={StyleSheet.absoluteFillObject}
+                            />
+                            <View style={styles.cityBadgeLabel}>
+                                <Ionicons name="location-sharp" size={14} color="#FFF" />
+                                <Text style={styles.cityBadgeText}>{physicalCityLabel}</Text>
+                            </View>
+                        </View>
+                    )}
+
+                    <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.apartmentSlider}>
                         {apartment.images?.map((img: string, index: number) => (
                             <Image key={index} source={{ uri: img }} style={styles.headerImage} />
                         ))}
                     </ScrollView>
+
                     <SafeAreaView style={styles.backButtonContainer}>
                         <TouchableOpacity onPress={() => router.back()} style={styles.roundButton}>
                             <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} />
@@ -252,7 +395,7 @@ export default function DetailsScreen() {
 
                 <BlurView intensity={80} tint="light" style={styles.contentCard}>
                     <View style={styles.indicator} />
-                    
+
                     <View style={styles.headerRow}>
                         <View style={{ flex: 1 }}>
                             <Text style={styles.title}>{apartment.title}</Text>
@@ -266,12 +409,55 @@ export default function DetailsScreen() {
                         </View>
                     </View>
 
+                    {}
+                    <Text style={styles.sectionTitle}>În apropiere și conectivitate</Text>
+                    <BlurView intensity={50} tint="light" style={styles.poiContainer}>
+                        {centerRouteDuration && (
+                            <View style={styles.routingInfoBadge}>
+                                <Ionicons name="navigate-circle" size={18} color={UI_COLORS.brandSky} />
+                                <Text style={styles.routingInfoText}>{centerRouteDuration}</Text>
+                            </View>
+                        )}
+                        <View style={styles.poiGrid}>
+                            {nearbyPois.map((poi, idx) => (
+                                <TouchableOpacity
+                                    key={idx}
+                                    style={styles.poiItem}
+                                    activeOpacity={0.7}
+                                    onPress={() => {
+                                        const queries: Record<string, string> = {
+                                            supermarket: 'supermarket nearby',
+                                            cafe: 'cafe nearby',
+                                            subway: 'subway station nearby',
+                                            bus: 'bus stop nearby',
+                                        };
+                                        const lat = apartment?.location?.latitude;
+                                        const lon = apartment?.location?.longitude;
+                                        const q = encodeURIComponent(queries[poi.type] || poi.label);
+                                        const url = lat && lon
+                                            ? `https://www.google.com/maps/search/${q}/@${lat},${lon},15z`
+                                            : `https://www.google.com/maps/search/${q}`;
+                                        Linking.openURL(url);
+                                    }}
+                                >
+                                    <Ionicons name={poi.icon} size={20} color={UI_COLORS.brandSky} />
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.poiLabel} numberOfLines={1}>{poi.label}</Text>
+                                        <Text style={styles.poiDistance}>{poi.distance}</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={14} color="rgba(77,171,247,0.5)" />
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </BlurView>
+
                     <View style={styles.ownerProfileRow}>
-                         <Image source={{ uri: apartment.userPhoto }} style={styles.ownerAvatar} />
-                         <View>
-                             <Text style={styles.ownerLabel}>Proprietar</Text>
-                             <Text style={styles.ownerName}>{apartment.userName}</Text>
-                         </View>
+                        <Image source={{ uri: apartment.userPhoto }} style={styles.ownerAvatar} />
+                        <View>
+                            <Text style={styles.ownerLabel}>Proprietar</Text>
+                            {}
+                            <Text style={styles.ownerName}>{apartment.userName}</Text>
+                        </View>
                     </View>
 
                     {isOwner && (
@@ -303,10 +489,15 @@ export default function DetailsScreen() {
                         </View>
                     )}
 
-                    <Text style={styles.sectionTitle}>Destinație vizată</Text>
+                    {/* ✅ Redenumit: "Unde vrea să meargă [Nume]" */}
+                    <Text style={styles.sectionTitle}>
+                        Unde vrea să meargă {apartment.userName?.split(' ')[0] || 'proprietarul'}
+                    </Text>
                     <BlurView intensity={60} tint="light" style={styles.targetCard}>
-                        <LinearGradient 
-                            colors={isMatch ? ['rgba(77, 171, 247, 0.15)', 'rgba(181, 255, 252, 0.15)'] : ['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']} 
+                        <LinearGradient
+                            colors={isMatch
+                                ? ['rgba(77, 171, 247, 0.15)', 'rgba(181, 255, 252, 0.15)']
+                                : ['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
                             style={styles.targetGradient}
                         >
                             <View style={styles.targetHeader}>
@@ -321,12 +512,13 @@ export default function DetailsScreen() {
                                 )}
                             </View>
                             <View style={styles.targetInfo}>
+                                {/* ✅ Culoare albastru deschis */}
                                 <Text style={[styles.valueLargeBrand, !isMatch && { fontSize: 18, opacity: 0.8 }]}>
                                     {apartment.targetCity || "Oriunde"}
                                 </Text>
                                 {isMatch && (
                                     <Text style={styles.matchDescription}>
-                                        🎉 Locuința ta din {myApartmentCity} este exact ce caută proprietarul!
+                                        🎉 Locuința ta din {myApartmentCity} este exact ce caută {apartment.userName?.split(' ')[0]}!
                                     </Text>
                                 )}
                             </View>
@@ -347,7 +539,9 @@ export default function DetailsScreen() {
                             initialRegion={{ ...mapCoords, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
                         >
                             <Marker coordinate={mapCoords}>
-                                <View style={styles.customMarker}><Ionicons name="home" size={14} color="#FFF" /></View>
+                                <View style={styles.customMarker}>
+                                    <Ionicons name="home" size={14} color="#FFF" />
+                                </View>
                             </Marker>
                         </MapView>
                     </View>
@@ -383,22 +577,35 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { ...StyleSheet.absoluteFillObject },
     loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    imageContainer: { height: 380 },
-    headerImage: { width: width, height: 380, resizeMode: 'cover' },
-    backButtonContainer: { position: 'absolute', top: 10, left: 20 },
-    roundButton: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.6)', justifyContent: 'center', alignItems: 'center' },
-    contentCard: { marginTop: -30, borderTopLeftRadius: 35, borderTopRightRadius: 35, padding: 25, minHeight: 800 },
+    heroContainer: { height: 440, backgroundColor: '#000' },
+    cityBannerWrapper: { height: 160, width: '100%', position: 'relative', overflow: 'hidden' },
+    cityBannerImage: { width: '100%', height: 160 },
+    cityBadgeLabel: { position: 'absolute', bottom: 15, left: 20, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 5 },
+    cityBadgeText: { color: '#FFF', fontFamily: 'Poppins_600SemiBold', fontSize: 13 },
+    apartmentSlider: { marginTop: -20, borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: '#fff', overflow: 'hidden' },
+    headerImage: { width: width, height: 280, resizeMode: 'cover' },
+    backButtonContainer: { position: 'absolute', top: 20, left: 20 },
+    roundButton: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.7)', justifyContent: 'center', alignItems: 'center' },
+    contentCard: { marginTop: -40, borderTopLeftRadius: 35, borderTopRightRadius: 35, padding: 25, minHeight: 800 },
     indicator: { width: 40, height: 5, backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: 10, alignSelf: 'center', marginBottom: 20 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-    title: { fontFamily: 'Poppins_700Bold', fontSize: 22, color: UI_COLORS.brandSky }, 
+    title: { fontFamily: 'Poppins_700Bold', fontSize: 22, color: UI_COLORS.brandSky },
     locationRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5 },
     locationText: { fontFamily: 'Poppins_400Regular', color: UI_COLORS.description, fontSize: 13, marginLeft: 5 },
-    sizeBadge: { backgroundColor: 'rgba(77, 171, 247, 0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 15 },
+    sizeBadge: { backgroundColor: 'rgba(77, 171, 247, 0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 15, height: 38 },
     sizeText: { fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky, fontSize: 14 },
+    poiContainer: { padding: 15, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' },
+    routingInfoBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.7)', padding: 10, borderRadius: 12, marginBottom: 12 },
+    routingInfoText: { fontFamily: 'Poppins_600SemiBold', fontSize: 13, color: UI_COLORS.brandSky, marginLeft: 8 },
+    poiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
+    poiItem: { width: '48%', backgroundColor: 'rgba(255,255,255,0.5)', padding: 12, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
+    poiIconBox: { width: 34, height: 34, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+    poiLabel: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, color: UI_COLORS.brandSky },
+    poiDistance: { fontFamily: 'Poppins_400Regular', fontSize: 11, color: UI_COLORS.description },
     ownerProfileRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.3)', padding: 12, borderRadius: 20 },
     ownerAvatar: { width: 45, height: 45, borderRadius: 22.5, marginRight: 12, borderWidth: 1, borderColor: '#fff' },
     ownerLabel: { fontSize: 10, fontFamily: 'Poppins_400Regular', color: UI_COLORS.description },
-    ownerName: { fontSize: 15, fontFamily: 'Poppins_600SemiBold', color: UI_COLORS.mainTitle },
+    ownerName: { fontSize: 15, fontFamily: 'Poppins_600SemiBold', color: UI_COLORS.brandSky },
     ownerNotice: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(77, 171, 247, 0.1)', padding: 12, borderRadius: 15, marginBottom: 20 },
     ownerNoticeText: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, color: UI_COLORS.brandSky, marginLeft: 10 },
     feedbackSection: { marginBottom: 20 },
@@ -414,7 +621,7 @@ const styles = StyleSheet.create({
     targetInfo: { marginTop: 0 },
     matchBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#4dabf7', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
     matchBadgeText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 10, marginLeft: 6 },
-    matchDescription: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, color: UI_COLORS.mainTitle, marginTop: 6 },
+    matchDescription: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, color: UI_COLORS.brandSky, marginTop: 6 },
     glassBoxLarge: { padding: 18, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', overflow: 'hidden' },
     valueLargeBrand: { fontFamily: 'Poppins_700Bold', fontSize: 24, color: UI_COLORS.brandSky },
     detailsText: { fontFamily: 'Poppins_400Regular', fontSize: 14, color: UI_COLORS.description, lineHeight: 22 },

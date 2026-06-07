@@ -43,7 +43,8 @@ const UI_COLORS = {
     errorText: '#ff4d6d',
     white: '#FFFFFF',
     btnGradient: ['#A2D2FF', '#6FB1FC'] as const,
-    cardGradient: ['rgba(255, 222, 233, 0.85)', 'rgba(181, 255, 252, 0.85)', 'rgba(224, 195, 252, 0.85)'] as const 
+    cardGradient: ['rgba(255, 222, 233, 0.85)', 'rgba(181, 255, 252, 0.85)', 'rgba(224, 195, 252, 0.85)'] as const,
+    bgGradient: ['#FFDEE9', '#B5FFFC', '#E0C3FC'] as const
 };
 
 interface SwapOffer {
@@ -130,7 +131,6 @@ export default function OffersScreen() {
             const currentSenderImg = selectedOffer.senderApartmentImage || "";
             const currentOwnerImg = selectedOffer.ownerApartmentImage || "";
 
-            // Actualizăm starea plății asigurându-ne că nicio imagine nu se pierde la rescriere
             const updateData: any = isOwner 
                 ? { 
                     ownerPaid: true, 
@@ -194,7 +194,6 @@ export default function OffersScreen() {
         const partnerPaid = isOwner ? item.senderPaid : item.ownerPaid;
         const myPaid = isOwner ? item.ownerPaid : item.senderPaid;
 
-        // Afișează pe card imaginea apartamentului celuilalt utilizator pentru claritate vizuală
         const displayApartmentImage = isOwner 
             ? (item.senderApartmentImage || item.apartmentImage || 'https://via.placeholder.com/400x200?text=Apartament+Partener') 
             : (item.apartmentImage || 'https://via.placeholder.com/400x200?text=Locuinta+Proprietar');
@@ -277,7 +276,7 @@ export default function OffersScreen() {
 
     return (
         <View style={styles.container}>
-            <LinearGradient colors={['#FFDEE9', '#B5FFFC', '#E0C3FC']} style={styles.background} />
+            <LinearGradient colors={UI_COLORS.bgGradient} style={styles.background} />
             <SafeAreaView style={{ flex: 1 }}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.headerBack}>
@@ -303,13 +302,20 @@ export default function OffersScreen() {
 
             <Modal animationType="fade" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
                 <View style={styles.modalBackdrop}>
-                    <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />
-                    <View style={styles.modalContent}>
-                        <View style={styles.lockCircle}>
-                            <Ionicons name="lock-closed" size={30} color={UI_COLORS.lightBlueText} />
+                    <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+                    
+                    <LinearGradient 
+                        colors={UI_COLORS.bgGradient} 
+                        start={{ x: 0, y: 0 }} 
+                        end={{ x: 1, y: 1 }} 
+                        style={styles.modalContentWithGradient}
+                    >
+                        <View style={styles.lockCirclePremium}>
+                            <Ionicons name="lock-closed" size={30} color="#FFFFFF" />
                         </View>
-                        <Text style={styles.modalTitle}>Securizare Fonduri</Text>
-                        <Text style={styles.modalBody}>
+                        {/* AICI S-A MODIFICAT CULOAREA ÎN ALBASTRU DESCHIS */}
+                        <Text style={styles.modalTitlePremium}>Securizare Fonduri</Text>
+                        <Text style={styles.modalBodyPremium}>
                             Garanția va fi păstrată în siguranță de Swaply până la finalizarea schimbului.
                         </Text>
                         
@@ -318,15 +324,18 @@ export default function OffersScreen() {
                                 {isProcessing ? (
                                     <ActivityIndicator color="#FFF" />
                                 ) : (
-                                    <Text style={styles.modalPayBtnText}>Confirmă Plata</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <Text style={styles.modalPayBtnText}>Confirmă Plata</Text>
+                                        <Ionicons name="card-outline" size={18} color="#FFF" />
+                                    </View>
                                 )}
                             </LinearGradient>
                         </TouchableOpacity>
                         
-                        <TouchableOpacity onPress={() => setModalVisible(false)} style={{ marginTop: 20 }}>
-                            <Text style={styles.cancelText}>Anulează</Text>
+                        <TouchableOpacity onPress={() => setModalVisible(false)} style={{ marginTop: 22 }}>
+                            <Text style={styles.cancelTextPremium}>Anulează</Text>
                         </TouchableOpacity>
-                    </View>
+                    </LinearGradient>
                 </View>
             </Modal>
         </View>
@@ -364,14 +373,45 @@ const styles = StyleSheet.create({
     waitingBadgeSimple: { flex: 1, padding: 15, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
     waitingTextSimple: { fontSize: 11, fontFamily: 'Poppins_600SemiBold', color: UI_COLORS.lightBlueText, textAlign: 'center' }, 
     modalBackdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-    modalContent: { width: '90%', padding: 30, borderRadius: 35, backgroundColor: '#FFF', alignItems: 'center', elevation: 20 },
-    lockCircle: { width: 70, height: 70, borderRadius: 35, backgroundColor: 'rgba(77, 171, 247, 0.08)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-    modalTitle: { fontSize: 22, fontFamily: 'Poppins_700Bold', color: UI_COLORS.lightBlueText, marginBottom: 10 }, 
-    modalBody: { textAlign: 'center', color: UI_COLORS.description, marginBottom: 25, fontSize: 14, lineHeight: 22 },
+    modalContentWithGradient: { 
+        width: '90%', 
+        padding: 30, 
+        borderRadius: 35, 
+        alignItems: 'center', 
+        elevation: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 15,
+    },
+    lockCirclePremium: { 
+        width: 70, 
+        height: 70, 
+        borderRadius: 35, 
+        backgroundColor: 'rgba(255, 255, 255, 0.25)', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        marginBottom: 20 
+    },
+    modalTitlePremium: { 
+        fontSize: 22, 
+        fontFamily: 'Poppins_700Bold', 
+        color: UI_COLORS.lightBlueText, // Folosește acum '#4dabf7' definit în culori globale
+        marginBottom: 10 
+    }, 
+    modalBodyPremium: { 
+        textAlign: 'center', 
+        color: '#2D3748', 
+        marginBottom: 25, 
+        fontSize: 14, 
+        lineHeight: 22,
+        fontFamily: 'Poppins_400Regular',
+        opacity: 0.9
+    },
     modalPayBtnWrapper: { width: '100%', height: 60, borderRadius: 20, overflow: 'hidden', elevation: 5 },
     modalPayBtn: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     modalPayBtnText: { color: '#FFF', fontSize: 16, fontFamily: 'Poppins_700Bold' },
-    cancelText: { color: UI_COLORS.description, fontSize: 14, fontFamily: 'Poppins_600SemiBold' },
+    cancelTextPremium: { color: '#4A5568', fontSize: 14, fontFamily: 'Poppins_600SemiBold', opacity: 0.8 },
     emptyContainer: { alignItems: 'center', marginTop: 100 },
     emptyText: { textAlign: 'center', color: UI_COLORS.description, marginTop: 15, paddingHorizontal: 40, fontFamily: 'Poppins_400Regular' },
 });

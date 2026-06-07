@@ -48,7 +48,7 @@ export default function ExploreScreen() {
   const [myApartment, setMyApartment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Stări Filtre
+  // filtrele
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [filterCity, setFilterCity] = useState('');
   const [minRating, setMinRating] = useState<number | null>(null);
@@ -88,7 +88,7 @@ export default function ExploreScreen() {
         }
       });
 
-      // 2. Ascultăm apartamentele
+      
       const q = query(collection(db, "apartments"), orderBy("createdAt", "desc"));
       unsubscribeAps = onSnapshot(q, (snapshot) => {
         const adsData = snapshot.docs.map(doc => {
@@ -109,7 +109,7 @@ export default function ExploreScreen() {
       });
     });
 
-    // 3. Favorite și propriul apartament
+    
     if (auth.currentUser) {
       const favQuery = query(collection(db, "favorites"), where("userId", "==", auth.currentUser.uid));
       unsubscribeFavs = onSnapshot(favQuery, (snapshot) => {
