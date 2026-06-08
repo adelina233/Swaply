@@ -146,7 +146,7 @@ export default function ReviewsScreen() {
             <SafeAreaView style={{ flex: 1 }}>
                 
                 <View style={styles.header}>
-                    {/* Butonul de înapoi încadrat acum într-un cerc elegant semitransparent */}
+                    {}
                     <TouchableOpacity onPress={() => router.back()} style={styles.circleBack}>
                         <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} />
                     </TouchableOpacity>
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: { padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     
-    // Modificat aici: adăugat fundal semitransparent fin și bordură discretă pentru un efect premium glassmorphism
+    
     circleBack: { 
         width: 44, 
         height: 44, 
