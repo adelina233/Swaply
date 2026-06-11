@@ -4,8 +4,8 @@ import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import { useNavigation, useRouter } from 'expo-router';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -23,7 +23,7 @@ import MapView, { Marker } from 'react-native-maps';
 
 // Firebase Imports
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage'; // Adăugat pentru poze
+import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import { auth, db } from '../firebaseConfig';
 
 const { width } = Dimensions.get('window');
@@ -72,6 +72,7 @@ const FloatingInput = ({ label, value, onChangeText, placeholder, multiline = fa
 
 export default function AddApartmentScreen() {
     const router = useRouter();
+    const navigation = useNavigation(); 
     const mapRef = useRef<MapView>(null);
     const [loading, setLoading] = useState(false);
     const [images, setImages] = useState<string[]>([]);
@@ -86,13 +87,18 @@ export default function AddApartmentScreen() {
         longitude: 26.1025,
     });
 
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerShown: false,
+        });
+    }, [navigation]);
+
     let [fontsLoaded] = useFonts({
         Poppins_400Regular,
         Poppins_600SemiBold,
         Poppins_700Bold,
     });
 
-    // FUNCȚIE NOUĂ: Transformă link-ul local în link de internet (Firebase Storage)
     const uploadImageAsync = async (uri: string) => {
         try {
             const response = await fetch(uri);
@@ -152,7 +158,7 @@ export default function AddApartmentScreen() {
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsMultipleSelection: true,
             selectionLimit: 5,
-            quality: 0.7, // Puțin mai mare pentru calitate bună
+            quality: 0.7,
         });
         if (!result.canceled) {
             setImages([...images, ...result.assets.map(a => a.uri)]);
@@ -173,7 +179,6 @@ export default function AddApartmentScreen() {
 
         setLoading(true);
         try {
-            // 1. Uploadăm pozele rând pe rând și obținem link-urile de internet
             const uploadedUrls = [];
             for (const imgUri of images) {
                 const url = await uploadImageAsync(imgUri);
@@ -184,7 +189,6 @@ export default function AddApartmentScreen() {
                 throw new Error("Nu s-au putut încărca pozele.");
             }
 
-            // 2. Salvăm totul în Firestore cu link-urile HTTPS corecte
             await addDoc(collection(db, "apartments"), {
                 userId: user.uid,
                 userName: user.displayName || "Utilizator",
@@ -195,7 +199,7 @@ export default function AddApartmentScreen() {
                 targetCity: targetCity,
                 addressInput: addressInput,
                 location: location,
-                images: uploadedUrls, // FOLOSIM LINK-URILE REALE AICI
+                images: uploadedUrls,
                 createdAt: serverTimestamp(),
             });
 
@@ -217,14 +221,18 @@ export default function AddApartmentScreen() {
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.roundButton}>
-                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.inputText} />
+                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} style={styles.iconOffset} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Adaugă proprietate</Text>
                     <View style={{ width: 45 }} />
                 </View>
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                    <Text style={styles.sectionLabel}>Fotografii apartament</Text>
+                    <View style={styles.photoHeaderRow}>
+                        <Text style={styles.sectionLabel}>Fotografii apartament</Text>
+                        <Text style={styles.photoCountText}>{images.length} / 5</Text>
+                    </View>
+                    
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
                         {images.map((uri, index) => (
                             <View key={index} style={styles.imageWrapper}>
@@ -303,16 +311,19 @@ export default function AddApartmentScreen() {
     );
 }
 
-// ... restul de styles rămâne identic cu cel oferit de tine
 const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { ...StyleSheet.absoluteFillObject },
     safeArea: { flex: 1 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 10 },
-    roundButton: { width: 44, height: 44, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' },
+    // Configurat pentru cerc perfect: laturile egale și borderRadius la jumătate
+    roundButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' },
+    iconOffset: { marginRight: 2 }, // Potrivire optică pentru centrare
     headerTitle: { fontSize: 18, fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },
     scrollContent: { padding: 25 },
-    sectionLabel: { fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: UI_COLORS.brandSky, marginBottom: 15, marginLeft: 5 },
+    photoHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, marginRight: 5 },
+    sectionLabel: { fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: UI_COLORS.brandSky, marginLeft: 5 },
+    photoCountText: { fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: UI_COLORS.brandSky },
     imageScroll: { marginBottom: 25 },
     imageWrapper: { marginRight: 15, position: 'relative' },
     previewImage: { width: 110, height: 110, borderRadius: 20 },

@@ -4,8 +4,9 @@ import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import * as Location from 'expo-location';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator, Alert, SafeAreaView, ScrollView,
     StyleSheet, Text, TextInput, TouchableOpacity, View
@@ -61,6 +62,7 @@ const FloatingInput = ({ label, value, onChangeText, placeholder, multiline = fa
 
 export default function EditApartmentScreen() {
     const router = useRouter();
+    const navigation = useNavigation(); 
     const { id } = useLocalSearchParams();
     const mapRef = useRef<MapView>(null);
 
@@ -74,11 +76,33 @@ export default function EditApartmentScreen() {
     const [images, setImages] = useState<string[]>([]);
     const [location, setLocation] = useState({ latitude: 44.4268, longitude: 26.1025 });
 
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerShown: false,
+        });
+    }, [navigation]);
+
     let [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold });
 
     useEffect(() => {
         if (id) loadApartmentData();
     }, [id]);
+
+    const updateAddressFromCoords = async (coords: { latitude: number, longitude: number }) => {
+        try {
+            const reverseResults = await Location.reverseGeocodeAsync(coords);
+            if (reverseResults.length > 0) {
+                const address = reverseResults[0];
+                const street = address.street || "";
+                const number = address.streetNumber || "";
+                const city = address.city || "";
+                const formattedAddress = `${street} ${number}${street || number ? ',' : ''} ${city}`;
+                setAddressInput(formattedAddress.trim());
+            }
+        } catch (error) {
+            console.error("Geocoding error: ", error);
+        }
+    };
 
     const uploadImageAsync = async (uri: string) => {
         if (uri.startsWith('http')) return uri;
@@ -92,7 +116,6 @@ export default function EditApartmentScreen() {
             
             await uploadBytes(storageRef, blob);
             const url = await getDownloadURL(storageRef);
-            // Am eliminat blob.close() pentru a evita eroarea de tip
             return url;
         } catch (error) {
             console.error("Edit Upload Error:", error);
@@ -167,14 +190,18 @@ export default function EditApartmentScreen() {
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.inputText} />
+                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} style={styles.iconOffset} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Editează Anunțul</Text>
                     <View style={{ width: 44 }} />
                 </View>
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                    <Text style={styles.sectionLabel}>Fotografii Anunț</Text>
+                    <View style={styles.photoHeaderRow}>
+                        <Text style={styles.sectionLabel}>Fotografii Anunț</Text>
+                        <Text style={styles.photoCountText}>{images.length} / 5</Text>
+                    </View>
+                    
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
                         {images.map((uri, index) => (
                             <View key={index} style={styles.imageWrapper}>
@@ -220,7 +247,10 @@ export default function EditApartmentScreen() {
                             style={{ flex: 1 }}
                             customMapStyle={mapStyle}
                             initialRegion={{ ...location, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
-                            onPress={(e) => setLocation(e.nativeEvent.coordinate)}
+                            onPress={(e) => {
+                                setLocation(e.nativeEvent.coordinate);
+                                updateAddressFromCoords(e.nativeEvent.coordinate);
+                            }}
                         >
                             <Marker coordinate={location}>
                                 <View style={styles.markerCircle}>
@@ -268,10 +298,14 @@ const styles = StyleSheet.create({
     loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     safeArea: { flex: 1 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 10 },
-    backButton: { width: 44, height: 44, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' },
+    // Dimensiuni egale și borderRadius setat la jumătate pentru un cerc perfect
+    backButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' },
+    iconOffset: { marginRight: 2 }, // Ajustare subtilă pentru a centra vizual iconița de chevron în cerc
     headerTitle: { fontSize: 18, fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },
     scrollContent: { padding: 25 },
-    sectionLabel: { fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: UI_COLORS.brandSky, marginBottom: 15, marginLeft: 5 },
+    photoHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, marginRight: 5 },
+    sectionLabel: { fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: UI_COLORS.brandSky, marginLeft: 5 },
+    photoCountText: { fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: UI_COLORS.brandSky },
     imageScroll: { marginBottom: 25 },
     imageWrapper: { marginRight: 15, position: 'relative' },
     image: { width: 110, height: 110, borderRadius: 20 },

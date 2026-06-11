@@ -218,7 +218,7 @@ export default function DetailsScreen() {
 
     
     const fetchCityImage = async (cityName: string) => {
-        // 1. Teleport API
+        
         try {
             const slug = cityName.toLowerCase()
                 .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -233,7 +233,7 @@ export default function DetailsScreen() {
             }
         } catch (e) { console.log("Teleport:", e); }
 
-        // 2. Wikipedia
+      
         try {
             const res = await fetch(
                 `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cityName)}`
