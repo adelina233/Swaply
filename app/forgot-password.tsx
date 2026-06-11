@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     switchText: { color: UI_COLORS.description, fontSize: 14, fontFamily: 'Poppins_400Regular' },
     switchTextBold: { fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },
 
-    // Card confirmare email trimis
+    
     infoCard: {
         marginTop: 28,
         borderRadius: 18,

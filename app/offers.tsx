@@ -2,8 +2,8 @@ import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } fr
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useNavigation, useRouter } from 'expo-router'; // Adăugat useNavigation și Stack
+import React, { useEffect, useLayoutEffect, useState } from 'react'; // Adăugat useLayoutEffect
 import {
     ActivityIndicator,
     Alert,
@@ -68,11 +68,19 @@ interface SwapOffer {
 
 export default function OffersScreen() {
     const router = useRouter();
+    const navigation = useNavigation(); 
     const [offers, setOffers] = useState<SwapOffer[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedOffer, setSelectedOffer] = useState<SwapOffer | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+
+   
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerShown: false,
+        });
+    }, [navigation]);
 
     let [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold });
 
@@ -96,7 +104,7 @@ export default function OffersScreen() {
                 return !isRejected && !isFullySettled;
             });
             setOffers(relevantOffers);
-            setLoading(false);
+            loading && setLoading(false);
         });
         
         return () => unsubscribe();
@@ -280,7 +288,7 @@ export default function OffersScreen() {
             <SafeAreaView style={{ flex: 1 }}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.headerBack}>
-                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.lightBlueText} />
+                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.lightBlueText} style={{ marginRight: 2 }} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Oferte de Schimb</Text>
                     <View style={{ width: 44 }} />
@@ -313,7 +321,6 @@ export default function OffersScreen() {
                         <View style={styles.lockCirclePremium}>
                             <Ionicons name="lock-closed" size={30} color="#FFFFFF" />
                         </View>
-                        {/* AICI S-A MODIFICAT CULOAREA ÎN ALBASTRU DESCHIS */}
                         <Text style={styles.modalTitlePremium}>Securizare Fonduri</Text>
                         <Text style={styles.modalBodyPremium}>
                             Garanția va fi păstrată în siguranță de Swaply până la finalizarea schimbului.
@@ -396,7 +403,7 @@ const styles = StyleSheet.create({
     modalTitlePremium: { 
         fontSize: 22, 
         fontFamily: 'Poppins_700Bold', 
-        color: UI_COLORS.lightBlueText, // Folosește acum '#4dabf7' definit în culori globale
+        color: UI_COLORS.lightBlueText, 
         marginBottom: 10 
     }, 
     modalBodyPremium: { 

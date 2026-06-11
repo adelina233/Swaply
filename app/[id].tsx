@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'; // Adăugat useNavigation și Stack
 import {
     addDoc,
     arrayUnion,
@@ -16,7 +16,7 @@ import {
     serverTimestamp,
     updateDoc
 } from 'firebase/firestore';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'; // Adăugat useLayoutEffect
 import {
     ActivityIndicator,
     Alert,
@@ -46,6 +46,7 @@ export default function ChatScreen() {
     const params = useLocalSearchParams();
     const { id } = params;
     const router = useRouter();
+    const navigation = useNavigation(); // Inițializare navigație nativă
 
     const [messages, setMessages] = useState<any[]>([]);
     const [inputText, setInputText] = useState('');
@@ -57,6 +58,13 @@ export default function ChatScreen() {
     const [translatedMessages, setTranslatedMessages] = useState<{ [key: string]: string }>({});
     const [translatingId, setTranslatingId] = useState<string | null>(null);
     const flatListRef = useRef<FlatList>(null);
+
+    // Ascundere sincronă a barierii negre înainte ca ecranul să se afișeze
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerShown: false,
+        });
+    }, [navigation]);
 
     let [fontsLoaded] = useFonts({
         Poppins_400Regular,
@@ -292,7 +300,6 @@ export default function ChatScreen() {
                 
                 {/* HEADER */}
                 <BlurView intensity={30} tint="light" style={styles.header}>
-                    {/* MODIFICAT: Sub săgeată s-a adăugat cercul transparent din lista de chat */}
                     <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                         <Ionicons name="chevron-back" size={26} color={UI_COLORS.brandSky} />
                     </TouchableOpacity>
@@ -314,10 +321,8 @@ export default function ChatScreen() {
                     </View>
                     
                     <View style={styles.headerInfo}>
-                        {/* MODIFICAT: Numele utilizatorului este acum cu albastru */}
                         <Text style={styles.headerTitle} numberOfLines={1}>{partnerData.name}</Text>
                         
-                        {/* MODIFICAT: Statusul verde arată activ doar dacă conversația NU este încheiată */}
                         <View style={styles.statusRow}>
                             <View style={[styles.onlineDot, isChatEnded && { backgroundColor: '#718096' }]} />
                             <Text style={styles.headerStatus}>{isChatEnded ? "Conversație încheiată" : "Activ acum"}</Text>
@@ -392,7 +397,6 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.15)',
         paddingTop: Platform.OS === 'android' ? 40 : 10,
     },
-    // MODIFICAT: S-a adăugat stilul cu fundal alb translucid pentru butonul de ieșire
     backBtn: {
         width: 44,
         height: 44,
@@ -409,7 +413,6 @@ const styles = StyleSheet.create({
     },
     fallbackText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 18 },
     headerInfo: { flex: 1, marginLeft: 12 },
-    // MODIFICAT: Culoarea titlului din header a fost schimbată în albastru
     headerTitle: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: UI_COLORS.brandSky }, 
     statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 1 },
     onlineDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#2D6A4F', marginRight: 5 },
@@ -449,7 +452,6 @@ const styles = StyleSheet.create({
     translateBtn: { marginLeft: 8 },
     translateBtnText: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', color: UI_COLORS.brandSky },
     keyboardContainer: { backgroundColor: 'transparent' }, 
-    // MODIFICAT: S-a eliminat complet marginea (bordura) albă a containerului de input
     inputContainer: { 
         flexDirection: 'row', alignItems: 'center', padding: 6, marginHorizontal: 16, marginBottom: 16,
         borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.45)',

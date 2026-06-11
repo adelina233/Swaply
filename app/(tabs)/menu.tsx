@@ -256,7 +256,7 @@ export default function MenuScreen() {
 
                     {/* --- BENTO GRID MENU --- */}
                     <View style={styles.bentoContainer}>
-                        {/* Explorează — vizibil pentru toți */}
+                        {/* Exploreaza — vizibil pentru toti utilizatorii */}
                         <Pressable style={styles.cardLargeGlass} onPress={() => router.push('/explore')}>
                             <View style={styles.cardContent}>
                                 <Text style={styles.cardTitleBrand}>Explorează</Text>
@@ -266,7 +266,7 @@ export default function MenuScreen() {
                         </Pressable>
 
                         <View style={styles.row}>
-                            {/* Adaugă — necesită autentificare */}
+                            {/* Adauga — necesita autentificare neparat*/}
                             <TouchableOpacity
                                 style={styles.cardSmallGlass}
                                 onPress={() => requireLogin('adăuga o locuință', () => router.push('/add-apartment'))}
@@ -277,7 +277,7 @@ export default function MenuScreen() {
                                 <Text style={styles.cardSmallTitleBrand}>Adaugă</Text>
                             </TouchableOpacity>
 
-                            {/* Favorite — necesită autentificare */}
+                            {/* Favorite — necesita autentificare */}
                             <TouchableOpacity
                                 style={styles.cardSmallGlass}
                                 onPress={() => requireLogin('vedea favoritele', () => router.push('/favorites'))}

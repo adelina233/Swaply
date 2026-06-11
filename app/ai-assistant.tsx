@@ -1,8 +1,8 @@
 import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } from '@expo-google-fonts/poppins';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import { useNavigation, useRouter } from 'expo-router'; // Adăugat useNavigation și Stack
+import React, { useLayoutEffect, useRef, useState } from 'react'; // Adăugat useLayoutEffect
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -50,12 +50,20 @@ type Message = {
 
 export default function AiAssistantScreen() {
     const router = useRouter();
+    const navigation = useNavigation(); // Inițializare navigație nativă
     const scrollRef = useRef<ScrollView>(null);
     const [messages, setMessages] = useState<Message[]>([
         { id: '0', role: 'assistant', text: 'Salut! Sunt asistentul Swaply 👋 Cu ce te pot ajuta astăzi? ✨' }
     ]);
     const [userQuestion, setUserQuestion] = useState('');
     const [isThinking, setIsThinking] = useState(false);
+
+    // Ascundere sincronă a barierii negre din Expo Router înainte ca layout-ul să fie desenat
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerShown: false,
+        });
+    }, [navigation]);
 
     let [fontsLoaded] = useFonts({
         Poppins_400Regular,
@@ -72,7 +80,6 @@ export default function AiAssistantScreen() {
         setUserQuestion('');
         setIsThinking(true);
 
-        // Scroll automant la trimitere
         setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
 
         try {
@@ -124,7 +131,7 @@ export default function AiAssistantScreen() {
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
                     <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} />
+                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} style={{ marginRight: 2 }} />
                     </TouchableOpacity>
                     <View style={styles.headerCenter}>
                         <LinearGradient
@@ -234,7 +241,7 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.6)',
+        backgroundColor: 'rgba(255,255,255,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
     },

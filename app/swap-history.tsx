@@ -2,9 +2,9 @@ import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } fr
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
@@ -31,9 +31,17 @@ const UI_COLORS = {
 
 export default function SwapHistoryScreen() {
     const router = useRouter();
+    const navigation = useNavigation(); 
     const [history, setHistory] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [hasSeenHistory, setHasSeenHistory] = useState(false);
+
+   
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerShown: false,
+        });
+    }, [navigation]);
 
     let [fontsLoaded] = useFonts({
         Poppins_400Regular,
@@ -140,7 +148,7 @@ export default function SwapHistoryScreen() {
             <SafeAreaView style={{ flex: 1 }}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} />
+                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} style={{ marginRight: 2 }} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Arhivă Schimburi</Text>
                     <View style={styles.archiveIconRight}>
@@ -181,13 +189,14 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between', 
         alignItems: 'center', 
         paddingHorizontal: 20, 
-        paddingVertical: 15 
+        marginVertical: 10
     },
+    
     backBtn: { 
         width: 44, 
         height: 44, 
         borderRadius: 22, 
-        backgroundColor: 'transparent', 
+        backgroundColor: 'rgba(255, 255, 255, 0.5)', 
         justifyContent: 'center', 
         alignItems: 'center'
     },
@@ -248,7 +257,6 @@ const styles = StyleSheet.create({
         marginBottom: 20 
     },
     aptBlock: { alignItems: 'center', flex: 1 },
-    // MODIFICAT: Eliminat complet bordura albă solidă (borderWidth, borderColor)
     aptImg: { 
         width: width * 0.22, 
         height: width * 0.22, 

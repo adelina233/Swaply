@@ -316,7 +316,6 @@ const styles = StyleSheet.create({
     background: { ...StyleSheet.absoluteFillObject },
     safeArea: { flex: 1 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 10 },
-    // Configurat pentru cerc perfect: laturile egale și borderRadius la jumătate
     roundButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' },
     iconOffset: { marginRight: 2 }, // Potrivire optică pentru centrare
     headerTitle: { fontSize: 18, fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },

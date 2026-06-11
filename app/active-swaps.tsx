@@ -833,7 +833,7 @@ export default function ActiveSwapsScreen() {
                     <Ionicons name="swap-horizontal" size={24} color={UI_COLORS.brandSky} />
                     <TouchableOpacity style={styles.aptBlock} onPress={() => openPartnerProfile(item)} activeOpacity={0.8}>
                         <Image source={{ uri: partnerAptImg || 'https://via.placeholder.com/150' }} style={styles.heroImg} />
-                        {/* ✅ Avatar partener suprapus pe poza apartamentului */}
+                        {}
                         {partnerPhoto && (
                             <View style={styles.partnerAvatarOverlay}>
                                 <Image source={{ uri: partnerPhoto }} style={styles.partnerAvatarSmall} />
@@ -849,15 +849,15 @@ export default function ActiveSwapsScreen() {
                 {/*Bara de progres*/}
                 <SwapProgressBar swapPeriod={item.swapPeriod} />
 
-                {/* Countdown sau badge activ */}
+                {}
                 <CountdownTimer swapPeriod={item.swapPeriod} partnerCity={myDestinationCity} />
 
-                {/* ✅ NOU: Vremea — mereu vizibilă, nu doar când e activ */}
+                {}
                 {myDestinationCity ? (
                     <WeatherWidget city={myDestinationCity} />
                 ) : null}
 
-                {/* Checklist */}
+                {}
                 <View style={styles.checklistContainer}>
                     <View style={styles.checkColumn}>
                         <Text style={styles.checkTitle}>Tu</Text>
@@ -872,7 +872,7 @@ export default function ActiveSwapsScreen() {
                     </View>
                 </View>
 
-                {/* Footer actions */}
+                {}
                 <View style={styles.footerActions}>
                     {!myCheckin ? (
                         <TouchableOpacity style={styles.mainBtnWrapper} onPress={() => handleAction(item, 'check-in')}>
@@ -941,7 +941,7 @@ export default function ActiveSwapsScreen() {
                 partner={partnerProfileData}
             />
 
-            {/* Report Modal */}
+            {}
             <Modal visible={reportModal} animationType="slide" transparent>
                 <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
                     <View style={styles.modalOverlayFull}>
@@ -1174,7 +1174,7 @@ const styles = StyleSheet.create({
     heroSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     aptBlock: { alignItems: 'center', width: width * 0.35 },
     heroImg: { width: 90, height: 90, borderRadius: 20, marginBottom: 8, backgroundColor: '#EEE' },
-    //avatar partener suprapus
+    
     partnerAvatarOverlay: { position: 'absolute', bottom: 22, right: 0, borderRadius: 14, borderWidth: 2, borderColor: '#FFF', overflow: 'hidden' },
     partnerAvatarSmall: { width: 28, height: 28 },
     partnerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },

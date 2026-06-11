@@ -2,8 +2,8 @@ import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } fr
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useNavigation, useRouter } from 'expo-router';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Firebase imports
@@ -18,8 +18,16 @@ const UI_COLORS = {
 
 export default function FavoritesScreen() {
   const router = useRouter();
+  const navigation = useNavigation(); 
   const [favApartments, setFavApartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  
+  useLayoutEffect(() => {
+    navigation.setOptions({
+        headerShown: false,
+    });
+  }, [navigation]);
 
   let [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -33,7 +41,6 @@ export default function FavoritesScreen() {
       return;
     }
 
-    // Ascultăm în timp real colecția de favorite
     const favQuery = query(collection(db, "favorites"), where("userId", "==", auth.currentUser.uid));
     
     const unsubscribe = onSnapshot(favQuery, async (snapshot) => {
@@ -46,12 +53,10 @@ export default function FavoritesScreen() {
       }
 
       try {
-        // Luăm detaliile apartamentelor
         const apQuery = query(collection(db, "apartments"));
         const apSnapshot = await getDocs(apQuery);
         const allAps = apSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // Filtrăm doar cele care sunt la favorite
         const filtered = allAps.filter(ap => apartmentIds.includes(ap.id));
         setFavApartments(filtered);
       } catch (error) {
@@ -69,7 +74,6 @@ export default function FavoritesScreen() {
     if (!userId) return;
 
     try {
-      // Căutăm documentul de favorit care face legătura între user și acest apartament
       const favQuery = query(
         collection(db, "favorites"), 
         where("userId", "==", userId),
@@ -78,12 +82,11 @@ export default function FavoritesScreen() {
       
       const snapshot = await getDocs(favQuery);
       
-      // Ștergem documentele găsite (ar trebui să fie doar unul)
       const deletePromises = snapshot.docs.map(document => deleteDoc(doc(db, "favorites", document.id)));
       await Promise.all(deletePromises);
       
     } catch (error) {
-        console.error("Error removing favorite:", error);
+        console.error("Error remove favorite:", error);
         Alert.alert("Eroare", "Nu s-a putut elimina de la favorite.");
     }
   };
@@ -96,7 +99,7 @@ export default function FavoritesScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} />
+            <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} style={{ marginRight: 2 }} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Favorite</Text>
           <View style={{ width: 44 }} />
@@ -160,7 +163,8 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginVertical: 10 },
   headerTitle: { fontSize: 22, fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },
-  backButton: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' },
+  // Configurat pentru cerc perfect: dimensiuni egale și borderRadius la jumătate
+  backButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' },
   listContent: { padding: 20 },
   houseCard: { height: 280, borderRadius: 30, marginBottom: 20, overflow: 'hidden', backgroundColor: '#FFF', elevation: 5 },
   houseImage: { width: '100%', height: '100%', position: 'absolute' },

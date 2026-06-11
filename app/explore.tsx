@@ -3,8 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useNavigation, useRouter } from 'expo-router';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -42,6 +42,7 @@ const UI_COLORS = {
 
 export default function ExploreScreen() {
   const router = useRouter();
+  const navigation = useNavigation(); 
   const [apartments, setApartments] = useState<any[]>([]);
   const [filteredApartments, setFilteredApartments] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -53,6 +54,13 @@ export default function ExploreScreen() {
   const [filterCity, setFilterCity] = useState('');
   const [minRating, setMinRating] = useState<number | null>(null);
   const [perfectMatchOnly, setPerfectMatchOnly] = useState(false);
+
+ 
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
 
   let [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -66,18 +74,16 @@ export default function ExploreScreen() {
     let unsubscribeReviews: () => void = () => { };
     let unsubscribeMyAd: () => void = () => { };
 
-    // 1. Ascultăm review-urile în timp real (Câmpuri: toUserId, ratingCommunication, ratingHome)
     unsubscribeReviews = onSnapshot(collection(db, "reviews"), (reviewsSnapshot) => {
       const ratingsMap: { [key: string]: { sum: number, count: number } } = {};
 
       reviewsSnapshot.forEach(d => {
         const rev = d.data();
-        const targetUid = rev.toUserId; // Din screenshot-ul tău Firebase
+        const targetUid = rev.toUserId; 
         const rComm = Number(rev.ratingCommunication) || 0;
         const rHome = Number(rev.ratingHome) || 0;
 
         if (targetUid && (rComm > 0 || rHome > 0)) {
-          // Facem media notelor din review-ul curent
           const mediaCurenta = (rComm + rHome) / 2;
 
           if (!ratingsMap[targetUid]) {
@@ -88,7 +94,6 @@ export default function ExploreScreen() {
         }
       });
 
-      
       const q = query(collection(db, "apartments"), orderBy("createdAt", "desc"));
       unsubscribeAps = onSnapshot(q, (snapshot) => {
         const adsData = snapshot.docs.map(doc => {
@@ -109,7 +114,6 @@ export default function ExploreScreen() {
       });
     });
 
-    
     if (auth.currentUser) {
       const favQuery = query(collection(db, "favorites"), where("userId", "==", auth.currentUser.uid));
       unsubscribeFavs = onSnapshot(favQuery, (snapshot) => {
@@ -270,7 +274,7 @@ export default function ExploreScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
-            <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} />
+            <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} style={{ marginRight: 2 }} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Explorează</Text>
           <TouchableOpacity onPress={() => setIsFilterVisible(true)} style={styles.iconBtn}>
@@ -380,6 +384,7 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
   headerTitle: { fontSize: 24, fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },
+  // Laturile sunt acum egale și borderRadius formează un cerc perfect
   iconBtn: {
     width: 48,
     height: 48,

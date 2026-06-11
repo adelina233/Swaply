@@ -64,6 +64,7 @@ export default function DetailsScreen() {
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [myApartmentCity, setMyApartmentCity] = useState<string | null>(null);
+    const [hasMyApartment, setHasMyApartment] = useState(false);
     const [stats, setStats] = useState({ home: 0, comm: 0, count: 0 });
 
     const [cityHeroImage, setCityHeroImage] = useState<string | null>(null);
@@ -131,6 +132,9 @@ export default function DetailsScreen() {
                 if (!snap.empty) {
                     const myData = snap.docs[0].data();
                     setMyApartmentCity(myData.city || myData.addressInput);
+                    setHasMyApartment(true);
+                } else {
+                    setHasMyApartment(false);
                 }
             } catch (e) { console.log(e); }
         };
@@ -145,17 +149,14 @@ export default function DetailsScreen() {
         const lat = aptData.location?.latitude;
         const lon = aptData.location?.longitude;
 
-    
         const physicalCity = aptData.city ||
             (aptData.addressInput ? aptData.addressInput.split(',').pop()?.trim() : null) ||
             "Budapest";
 
-        // Fetch poza pentru orașul fizic al apartamentului
         await fetchCityImage(physicalCity);
 
         if (!lat || !lon) return;
 
-       
         try {
             const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];(node["shop"="supermarket"](around:500,${lat},${lon});node["amenity"="cafe"](around:500,${lat},${lon});node["railway"="subway_entrance"](around:500,${lat},${lon}););out body;`;
             const response = await fetch(overpassUrl);
@@ -197,7 +198,6 @@ export default function DetailsScreen() {
             ]);
         }
 
-    
         try {
             const targetLat = lat + 0.025;
             const targetLon = lon + 0.025;
@@ -216,9 +216,7 @@ export default function DetailsScreen() {
         }
     };
 
-    
     const fetchCityImage = async (cityName: string) => {
-        
         try {
             const slug = cityName.toLowerCase()
                 .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -233,7 +231,6 @@ export default function DetailsScreen() {
             }
         } catch (e) { console.log("Teleport:", e); }
 
-      
         try {
             const res = await fetch(
                 `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cityName)}`
@@ -245,7 +242,6 @@ export default function DetailsScreen() {
             }
         } catch (e) { console.log("Wikipedia:", e); }
 
-        // 3. Fallback generic
         setCityHeroImage(`https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1200&auto=format&fit=crop`);
     };
 
@@ -300,6 +296,17 @@ export default function DetailsScreen() {
         if (isOwner) return;
 
         if (type === 'swap') {
+            if (!hasMyApartment) {
+                Alert.alert(
+                    "Anunț necesar",
+                    "Trebuie să ai un anunț postat pentru a propune un schimb. Adaugă-ți locuința mai întâi!",
+                    [
+                        { text: "Anulează", style: "cancel" },
+                        { text: "Adaugă anunț", onPress: () => router.push('/(tabs)/create') }
+                    ]
+                );
+                return;
+            }
             router.push({ pathname: '/create-offer', params: { targetId: id } } as any);
             return;
         }
@@ -350,7 +357,6 @@ export default function DetailsScreen() {
         longitude: apartment.location?.longitude || 26.1025
     };
 
-
     const physicalCityLabel = apartment.city ||
         (apartment.addressInput ? apartment.addressInput.split(',').pop()?.trim() : null) ||
         "Locație";
@@ -361,7 +367,6 @@ export default function DetailsScreen() {
 
             <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
                 <View style={styles.heroContainer}>
-                    {/* ✅ Banner cu poza ORAȘULUI FIZIC al apartamentului */}
                     {cityHeroImage && (
                         <View style={styles.cityBannerWrapper}>
                             <Image
@@ -388,7 +393,7 @@ export default function DetailsScreen() {
 
                     <SafeAreaView style={styles.backButtonContainer}>
                         <TouchableOpacity onPress={() => router.back()} style={styles.roundButton}>
-                            <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} />
+                            <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} style={styles.iconOffset} />
                         </TouchableOpacity>
                     </SafeAreaView>
                 </View>
@@ -409,14 +414,13 @@ export default function DetailsScreen() {
                         </View>
                     </View>
 
-                    {}
                     <Text style={styles.sectionTitle}>În apropiere și conectivitate</Text>
-                    <BlurView intensity={50} tint="light" style={styles.poiContainer}>
+                    <View style={styles.poiContainer}>
                         {centerRouteDuration && (
-                            <View style={styles.routingInfoBadge}>
+                            <BlurView intensity={40} tint="light" style={styles.routingInfoBadge}>
                                 <Ionicons name="navigate-circle" size={18} color={UI_COLORS.brandSky} />
                                 <Text style={styles.routingInfoText}>{centerRouteDuration}</Text>
-                            </View>
+                            </BlurView>
                         )}
                         <View style={styles.poiGrid}>
                             {nearbyPois.map((poi, idx) => (
@@ -449,13 +453,12 @@ export default function DetailsScreen() {
                                 </TouchableOpacity>
                             ))}
                         </View>
-                    </BlurView>
+                    </View>
 
                     <View style={styles.ownerProfileRow}>
                         <Image source={{ uri: apartment.userPhoto }} style={styles.ownerAvatar} />
                         <View>
                             <Text style={styles.ownerLabel}>Proprietar</Text>
-                            {}
                             <Text style={styles.ownerName}>{apartment.userName}</Text>
                         </View>
                     </View>
@@ -489,7 +492,6 @@ export default function DetailsScreen() {
                         </View>
                     )}
 
-                    {/* ✅ Redenumit: "Unde vrea să meargă [Nume]" */}
                     <Text style={styles.sectionTitle}>
                         Unde vrea să meargă {apartment.userName?.split(' ')[0] || 'proprietarul'}
                     </Text>
@@ -512,7 +514,6 @@ export default function DetailsScreen() {
                                 )}
                             </View>
                             <View style={styles.targetInfo}>
-                                {/* ✅ Culoare albastru deschis */}
                                 <Text style={[styles.valueLargeBrand, !isMatch && { fontSize: 18, opacity: 0.8 }]}>
                                     {apartment.targetCity || "Oriunde"}
                                 </Text>
@@ -553,7 +554,7 @@ export default function DetailsScreen() {
             {!isOwner && (
                 <BlurView intensity={100} tint="light" style={styles.bottomBar}>
                     <View style={styles.actionContainer}>
-                        <TouchableOpacity style={styles.btnWrapper} onPress={() => handleAction('chat')} disabled={sending}>
+                        <TouchableOpacity activeOpacity={0.9} style={styles.btnWrapper} onPress={() => handleAction('chat')} disabled={sending}>
                             <LinearGradient colors={[UI_COLORS.softBlue, UI_COLORS.buttonBlue]} style={styles.mainActionBtn}>
                                 {sending ? <ActivityIndicator color="#FFF" /> : (
                                     <View style={styles.btnContent}>
@@ -563,8 +564,19 @@ export default function DetailsScreen() {
                                 )}
                             </LinearGradient>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.secondaryBtn} onPress={() => handleAction('swap')}>
-                            <Text style={styles.secondaryBtnText}>Propune schimb direct</Text>
+
+                        <TouchableOpacity
+                            style={[styles.secondaryBtn, !hasMyApartment && styles.secondaryBtnDisabled]}
+                            onPress={() => handleAction('swap')}
+                        >
+                            <View style={styles.secondaryBtnContent}>
+                                {!hasMyApartment && (
+                                    <Ionicons name="lock-closed" size={14} color={UI_COLORS.brandSky} style={{ marginRight: 6, opacity: 0.6 }} />
+                                )}
+                                <Text style={[styles.secondaryBtnText, !hasMyApartment && styles.secondaryBtnTextDisabled]}>
+                                    {hasMyApartment ? 'Propune schimb direct' : 'Adaugă un anunț pentru a propune schimb'}
+                                </Text>
+                            </View>
                         </TouchableOpacity>
                     </View>
                 </BlurView>
@@ -577,15 +589,17 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { ...StyleSheet.absoluteFillObject },
     loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    heroContainer: { height: 440, backgroundColor: '#000' },
+    heroContainer: { height: 440 },
     cityBannerWrapper: { height: 160, width: '100%', position: 'relative', overflow: 'hidden' },
     cityBannerImage: { width: '100%', height: 160 },
     cityBadgeLabel: { position: 'absolute', bottom: 15, left: 20, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 5 },
     cityBadgeText: { color: '#FFF', fontFamily: 'Poppins_600SemiBold', fontSize: 13 },
-    apartmentSlider: { marginTop: -20, borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: '#fff', overflow: 'hidden' },
+    apartmentSlider: { marginTop: -20, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' },
     headerImage: { width: width, height: 280, resizeMode: 'cover' },
     backButtonContainer: { position: 'absolute', top: 20, left: 20 },
-    roundButton: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.7)', justifyContent: 'center', alignItems: 'center' },
+    // Configurat pentru cerc perfect: laturi egale și jumătate din dimensiune la radius
+    roundButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.7)', justifyContent: 'center', alignItems: 'center' },
+    iconOffset: { marginRight: 2 },
     contentCard: { marginTop: -40, borderTopLeftRadius: 35, borderTopRightRadius: 35, padding: 25, minHeight: 800 },
     indicator: { width: 40, height: 5, backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: 10, alignSelf: 'center', marginBottom: 20 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
@@ -594,12 +608,12 @@ const styles = StyleSheet.create({
     locationText: { fontFamily: 'Poppins_400Regular', color: UI_COLORS.description, fontSize: 13, marginLeft: 5 },
     sizeBadge: { backgroundColor: 'rgba(77, 171, 247, 0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 15, height: 38 },
     sizeText: { fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky, fontSize: 14 },
-    poiContainer: { padding: 15, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' },
-    routingInfoBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.7)', padding: 10, borderRadius: 12, marginBottom: 12 },
+    // Efect curat de sticlă transparentă pentru containerele de API
+    poiContainer: { marginBottom: 20 },
+    routingInfoBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.3)', padding: 12, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', overflow: 'hidden' },
     routingInfoText: { fontFamily: 'Poppins_600SemiBold', fontSize: 13, color: UI_COLORS.brandSky, marginLeft: 8 },
     poiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
-    poiItem: { width: '48%', backgroundColor: 'rgba(255,255,255,0.5)', padding: 12, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
-    poiIconBox: { width: 34, height: 34, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+    poiItem: { width: '48%', backgroundColor: 'rgba(255,255,255,0.35)', padding: 12, borderRadius: 16, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
     poiLabel: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, color: UI_COLORS.brandSky },
     poiDistance: { fontFamily: 'Poppins_400Regular', fontSize: 11, color: UI_COLORS.description },
     ownerProfileRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.3)', padding: 12, borderRadius: 20 },
@@ -635,5 +649,8 @@ const styles = StyleSheet.create({
     btnContent: { flexDirection: 'row', alignItems: 'center' },
     mainActionText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 16, marginLeft: 10 },
     secondaryBtn: { paddingVertical: 10, alignItems: 'center' },
+    secondaryBtnDisabled: { opacity: 0.6 },
+    secondaryBtnContent: { flexDirection: 'row', alignItems: 'center' },
     secondaryBtnText: { fontFamily: 'Poppins_600SemiBold', color: UI_COLORS.brandSky, fontSize: 14 },
+    secondaryBtnTextDisabled: { fontSize: 12, color: UI_COLORS.description },
 });

@@ -4,10 +4,10 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -74,6 +74,7 @@ const FloatingInput = ({ label, value, onChangeText, placeholder, keyboardType =
 
 export default function SettingsScreen() {
     const router = useRouter();
+    const navigation = useNavigation(); 
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -88,6 +89,12 @@ export default function SettingsScreen() {
         profileImage: '',
         language: 'ro'
     });
+
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerShown: false,
+        });
+    }, [navigation]);
 
     let [fontsLoaded] = useFonts({
         Poppins_400Regular,
@@ -117,7 +124,7 @@ export default function SettingsScreen() {
                     }
                 } catch (error) {
                     console.error(error);
-                } finally { // Corectat aici din "final" în "finally"
+                } finally { 
                     setFetching(false);
                 }
             }
@@ -166,11 +173,6 @@ export default function SettingsScreen() {
     };
 
     const handleSave = async () => {
-        if (!userData.phone || userData.phone.replace(/\s/g, '').length < 10) {
-            Alert.alert("Profil Incomplet", "Introdu un număr de telefon valid.");
-            return;
-        }
-
         setLoading(true);
         try {
             const user = auth.currentUser;
@@ -219,7 +221,7 @@ export default function SettingsScreen() {
                     
                     <View style={styles.header}>
                         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                            <Ionicons name="arrow-back" size={24} color={UI_COLORS.inputText} />
+                            <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} style={{ marginRight: 2 }} />
                         </TouchableOpacity>
                         <Text style={styles.headerTitle}>Editează Profil</Text>
                         <View style={{ width: 44 }} />
@@ -263,7 +265,6 @@ export default function SettingsScreen() {
                             placeholder="07xx xxx xxx"
                             keyboardType="phone-pad"
                         />
-                        <Text style={styles.infoSubText}>* Necesar pentru schimburi.</Text>
 
                         <FloatingInput 
                             label="Nume" 
@@ -341,7 +342,8 @@ const styles = StyleSheet.create({
     safeArea: { flex: 1 },
     scrollContent: { padding: 25 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    backButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.7)', justifyContent: 'center', alignItems: 'center' },
+    // MODIFICAT: S-a schimbat opacitatea de la 0.7 la 0.5 pentru a fi la fel ca pe celelalte pagini
+    backButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' },
     headerTitle: { fontSize: 22, fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },
     avatarSection: { alignItems: 'center', marginBottom: 30 },
     avatarWrapper: { position: 'relative' },
@@ -363,7 +365,6 @@ const styles = StyleSheet.create({
     labelFloating: { fontSize: 11, top: 8, color: UI_COLORS.brandSky, fontFamily: 'Poppins_600SemiBold' },
     textInput: { fontSize: 16, color: UI_COLORS.inputText, fontFamily: 'Poppins_400Regular', height: '100%', width: '100%' },
     dateValueText: { fontFamily: 'Poppins_400Regular', fontSize: 16, color: UI_COLORS.inputText, marginTop: 12 },
-    infoSubText: { fontSize: 10, color: '#FF4D6D', fontFamily: 'Poppins_400Regular', marginLeft: 10, marginTop: -10 },
     dateSelector: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     saveButtonContainer: { marginTop: 20, borderRadius: 18, overflow: 'hidden' },
     saveButton: { height: 58, justifyContent: 'center', alignItems: 'center' },
