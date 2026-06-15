@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'; // Adăugat useNavigation și Stack
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import {
     addDoc,
     arrayUnion,
@@ -16,7 +16,7 @@ import {
     serverTimestamp,
     updateDoc
 } from 'firebase/firestore';
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'; // Adăugat useLayoutEffect
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -46,7 +46,7 @@ export default function ChatScreen() {
     const params = useLocalSearchParams();
     const { id } = params;
     const router = useRouter();
-    const navigation = useNavigation(); // Inițializare navigație nativă
+    const navigation = useNavigation(); 
 
     const [messages, setMessages] = useState<any[]>([]);
     const [inputText, setInputText] = useState('');
@@ -59,7 +59,7 @@ export default function ChatScreen() {
     const [translatingId, setTranslatingId] = useState<string | null>(null);
     const flatListRef = useRef<FlatList>(null);
 
-    // Ascundere sincronă a barierii negre înainte ca ecranul să se afișeze
+    
     useLayoutEffect(() => {
         navigation.setOptions({
             headerShown: false,
@@ -336,7 +336,7 @@ export default function ChatScreen() {
                     )}
                 </BlurView>
 
-                {/* LISTA MESAJE */}
+                {}
                 <FlatList
                     ref={flatListRef}
                     data={messages}
@@ -347,7 +347,7 @@ export default function ChatScreen() {
                     showsVerticalScrollIndicator={false}
                 />
 
-                {/* INPUT AREA */}
+                {}
                 <KeyboardAvoidingView 
                     behavior={Platform.OS === "ios" ? "padding" : undefined} 
                     keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}

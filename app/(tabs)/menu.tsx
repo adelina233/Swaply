@@ -19,7 +19,6 @@ import {
     View
 } from 'react-native';
 
-// Firebase imports
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, getDocs, onSnapshot, or, query, where, writeBatch } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig';
@@ -55,10 +54,16 @@ export default function MenuScreen() {
     const [unreadNotifCount, setUnreadNotifCount] = useState(0);
     const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
+    // ✅ State-uri pentru widget statistici
+    const [completedSwaps, setCompletedSwaps] = useState(0);
+    const [avgRating, setAvgRating] = useState<number | null>(null);
+    const [citiesVisited, setCitiesVisited] = useState<string[]>([]);
+
     const [profileModal, setProfileModal] = useState(false);
     const [aiHubVisible, setAiHubVisible] = useState(false);
     const [loginAlertModal, setLoginAlertModal] = useState(false);
     const [loginAlertFeature, setLoginAlertFeature] = useState('');
+    const [statsModal, setStatsModal] = useState(false);
 
     let [fontsLoaded] = useFonts({
         Poppins_400Regular,
@@ -141,6 +146,21 @@ export default function MenuScreen() {
                         req[`history_seen_by_${user.uid}`] !== true
                     );
                     setUnreadHistoryCount(finalizedUnseen.length);
+
+                    // ✅ Calculează statistici pentru widget
+                    const completed = allReqs.filter((req: any) =>
+                        req[`feedback_from_${req.ownerId}`] === true &&
+                        req[`feedback_from_${req.senderId}`] === true
+                    );
+                    setCompletedSwaps(completed.length);
+
+                    // Orașe vizitate unice
+                    const cities = new Set<string>();
+                    allReqs.forEach((req: any) => {
+                        if (req.ownerId === user.uid && req.targetCity) cities.add(req.targetCity);
+                        if (req.senderId === user.uid && req.senderCity) cities.add(req.senderCity);
+                    });
+                    setCitiesVisited(Array.from(cities).filter(Boolean));
                 });
 
                 const swapsQuery = query(
@@ -157,6 +177,21 @@ export default function MenuScreen() {
                     setActiveSwapsCount(involved.filter(s => s[`feedback_from_${user.uid}`] !== true).length);
                     setHistoryCount(involved.filter(s => s[`feedback_from_${s.ownerId}`] === true && s[`feedback_from_${s.senderId}`] === true).length);
                     setLoading(false);
+                });
+
+                
+                const reviewsQuery = query(
+                    collection(db, "reviews"),
+                    where("toUserId", "==", user.uid)
+                );
+                onSnapshot(reviewsQuery, (snapshot) => {
+                    if (snapshot.size > 0) {
+                        const reviews = snapshot.docs.map(d => d.data());
+                        const total = reviews.reduce((sum, r) => sum + ((r.ratingHome + r.ratingCommunication) / 2), 0);
+                        setAvgRating(Math.round((total / reviews.length) * 10) / 10);
+                    } else {
+                        setAvgRating(null);
+                    }
                 });
 
             } else {
@@ -201,7 +236,7 @@ export default function MenuScreen() {
             <SafeAreaView style={styles.safeArea}>
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-                    {/* --- HEADER --- */}
+                    {/* HEADER */}
                     <View style={styles.header}>
                         <View>
                             <Text style={styles.welcomeBack}>Bună,</Text>
@@ -227,7 +262,6 @@ export default function MenuScreen() {
                                 {isLoggedIn && userPhoto ? (
                                     <Image source={{ uri: userPhoto }} style={styles.avatar} />
                                 ) : (
-                                    // Fundal transparent, fără albul vechi
                                     <View style={styles.anonymousAvatar}>
                                         <Ionicons name="person" size={24} color={UI_COLORS.brandSky} />
                                     </View>
@@ -236,7 +270,7 @@ export default function MenuScreen() {
                         </View>
                     </View>
 
-                    {/* --- MY ADS --- */}
+                    {/* Locuințele tale */}
                     {isLoggedIn && myAds.length > 0 && (
                         <View style={styles.myAdsSection}>
                             <Text style={styles.sectionTitleBrand}>Locuințele tale</Text>
@@ -254,9 +288,10 @@ export default function MenuScreen() {
                         </View>
                     )}
 
-                    {/* --- BENTO GRID MENU --- */}
+
+
+                    {/* BENTO CARDS */}
                     <View style={styles.bentoContainer}>
-                        {/* Exploreaza — vizibil pentru toti utilizatorii */}
                         <Pressable style={styles.cardLargeGlass} onPress={() => router.push('/explore')}>
                             <View style={styles.cardContent}>
                                 <Text style={styles.cardTitleBrand}>Explorează</Text>
@@ -266,7 +301,6 @@ export default function MenuScreen() {
                         </Pressable>
 
                         <View style={styles.row}>
-                            {/* Adauga — necesita autentificare neparat*/}
                             <TouchableOpacity
                                 style={styles.cardSmallGlass}
                                 onPress={() => requireLogin('adăuga o locuință', () => router.push('/add-apartment'))}
@@ -277,7 +311,6 @@ export default function MenuScreen() {
                                 <Text style={styles.cardSmallTitleBrand}>Adaugă</Text>
                             </TouchableOpacity>
 
-                            {/* Favorite — necesita autentificare */}
                             <TouchableOpacity
                                 style={styles.cardSmallGlass}
                                 onPress={() => requireLogin('vedea favoritele', () => router.push('/favorites'))}
@@ -333,7 +366,73 @@ export default function MenuScreen() {
                 </ScrollView>
             </SafeAreaView>
 
-            {/* --- MESSAGES HUB --- */}
+            {}
+            {isLoggedIn && (
+                <TouchableOpacity
+                    activeOpacity={0.8}
+                    style={styles.statsFloatBtn}
+                    onPress={() => setStatsModal(true)}
+                >
+                    <LinearGradient colors={['#E0C3FC', '#4dabf7']} style={styles.statsFloatGradient}>
+                        <Ionicons name="bar-chart" size={22} color="#FFF" />
+                    </LinearGradient>
+                </TouchableOpacity>
+            )}
+
+            {/* ✅ MODAL STATISTICI */}
+            <Modal visible={statsModal} transparent animationType="slide">
+                <Pressable style={styles.statsOverlay} onPress={() => setStatsModal(false)}>
+                    <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />
+                </Pressable>
+                <View style={styles.statsSheet}>
+                    <LinearGradient colors={['#FFDEE9', '#B5FFFC', '#E0C3FC']} style={StyleSheet.absoluteFill} />
+                    <BlurView intensity={40} tint="light" style={styles.statsSheetInner}>
+                        <View style={styles.statsHandle} />
+                        <View style={styles.statsHeaderRow}>
+                            <Text style={styles.statsSheetTitle}>Activitatea ta</Text>
+                            <TouchableOpacity onPress={() => setStatsModal(false)}>
+                                <Ionicons name="close-circle" size={28} color={UI_COLORS.brandSky} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.cardWideGlass}>
+                            <View style={styles.cardWideContent}>
+                                <Text style={styles.cardWideTitleBrand}>Schimburi finalizate</Text>
+                                <Text style={styles.cardWideSub}>{completedSwaps > 0 ? `${completedSwaps} schimburi completate` : 'Niciun schimb finalizat'}</Text>
+                            </View>
+                            <View style={[styles.iconBg, { backgroundColor: 'rgba(77, 171, 247, 0.15)', marginBottom: 0 }]}>
+                                <Ionicons name="swap-horizontal" size={22} color={UI_COLORS.brandSky} />
+                            </View>
+                        </View>
+
+                        <View style={[styles.cardWideGlass, { marginTop: 12 }]}>
+                            <View style={styles.cardWideContent}>
+                                <Text style={styles.cardWideTitleBrand}>Rating mediu</Text>
+                                <Text style={styles.cardWideSub}>{avgRating !== null ? `${avgRating.toFixed(1)} / 5.0 stele` : 'Nu ai recenzii încă'}</Text>
+                            </View>
+                            <View style={[styles.iconBg, { backgroundColor: UI_COLORS.palePink, marginBottom: 0 }]}>
+                                <Ionicons name="star" size={22} color={UI_COLORS.pinkIcon} />
+                            </View>
+                        </View>
+
+                        <View style={[styles.cardWideGlass, { marginTop: 12 }]}>
+                            <View style={styles.cardWideContent}>
+                                <Text style={styles.cardWideTitleBrand}>Orașe explorate</Text>
+                                <Text style={styles.cardWideSub}>
+                                    {citiesVisited.length > 0
+                                        ? citiesVisited.slice(0, 3).join(', ') + (citiesVisited.length > 3 ? ` +${citiesVisited.length - 3}` : '')
+                                        : 'Niciun oraș vizitat'}
+                                </Text>
+                            </View>
+                            <View style={[styles.iconBg, { backgroundColor: 'rgba(77, 171, 247, 0.15)', marginBottom: 0 }]}>
+                                <Ionicons name="location" size={22} color={UI_COLORS.brandSky} />
+                            </View>
+                        </View>
+                    </BlurView>
+                </View>
+            </Modal>
+
+            {/* AI HUB */}
             <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.aiWrapper}>
                 {aiHubVisible && (
                     <View style={styles.hubContainer}>
@@ -387,7 +486,7 @@ export default function MenuScreen() {
                 )}
             </KeyboardAvoidingView>
 
-            {/* --- MODAL PROFIL --- */}
+            {}
             <Modal visible={profileModal} transparent animationType="fade">
                 <Pressable style={styles.modalOverlay} onPress={() => setProfileModal(false)}>
                     <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />
@@ -429,7 +528,7 @@ export default function MenuScreen() {
                 </Pressable>
             </Modal>
 
-            {/* --- MODAL LOGIN ALERT --- */}
+            {}
             <Modal visible={loginAlertModal} transparent animationType="fade">
                 <Pressable style={styles.loginAlertOverlay} onPress={() => setLoginAlertModal(false)}>
                     <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />
@@ -478,52 +577,88 @@ const styles = StyleSheet.create({
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: 15 },
     welcomeBack: { fontFamily: 'Poppins_400Regular', fontSize: 14, color: UI_COLORS.description },
     nameText: { fontFamily: 'Poppins_700Bold', fontSize: 26, color: UI_COLORS.brandSky },
-
-    notifBtnTransparent: {
-        width: 36,
-        height: 36,
-        justifyContent: 'center',
-        alignItems: 'center',
-        position: 'relative'
-    },
-    notifBadgeTopRight: {
-        position: 'absolute',
-        top: 0,
-        right: -2,
-        minWidth: 16,
-        height: 16,
-        borderRadius: 8,
-        backgroundColor: UI_COLORS.errorRed,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 4,
-    },
+    notifBtnTransparent: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center', position: 'relative' },
+    notifBadgeTopRight: { position: 'absolute', top: 0, right: -2, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: UI_COLORS.errorRed, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
     badgeText: { color: 'white', fontSize: 8, fontFamily: 'Poppins_700Bold' },
-
-    // Fundal transparent pentru cercul de profil
-    profileCircle: {
-        width: 52,
-        height: 52,
-        borderRadius: 26,
-        backgroundColor: 'transparent',
-        overflow: 'hidden'
-    },
+    profileCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'transparent', overflow: 'hidden' },
     avatar: { width: '100%', height: '100%' },
-    // Fundal transparent pentru avatarul anonim
-    anonymousAvatar: {
-        width: '100%',
-        height: '100%',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'transparent'
-    },
-
+    anonymousAvatar: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' },
     myAdsSection: { marginBottom: 25 },
     sectionTitleBrand: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: UI_COLORS.brandSky, marginBottom: 12 },
     miniCard: { width: 95, height: 95, borderRadius: 18, marginRight: 15, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.5)' },
     miniImage: { width: '100%', height: '100%' },
     editOverlay: { position: 'absolute', bottom: 0, width: '100%', backgroundColor: 'rgba(0,0,0,0.5)', paddingVertical: 4, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
     editText: { color: '#FFF', fontSize: 10, fontFamily: 'Poppins_600SemiBold', marginLeft: 4 },
+
+    
+    statsWidget: {
+        backgroundColor: 'rgba(255,255,255,0.4)',
+        borderRadius: 30,
+        padding: 20,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.6)',
+    },
+    statsTitle: {
+        fontFamily: 'Poppins_700Bold',
+        fontSize: 16,
+        color: UI_COLORS.brandSky,
+        marginBottom: 16,
+    },
+    statsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 10,
+        marginBottom: 16,
+    },
+    statCard: {
+        flex: 1,
+        borderRadius: 22,
+        padding: 14,
+        alignItems: 'center',
+        overflow: 'hidden',
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        gap: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.7)',
+    },
+    statIconBg: {
+        width: 38,
+        height: 38,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    statValue: {
+        fontFamily: 'Poppins_700Bold',
+        fontSize: 22,
+        color: UI_COLORS.brandSky,
+    },
+    statLabel: {
+        fontFamily: 'Poppins_400Regular',
+        fontSize: 10,
+        color: UI_COLORS.description,
+        textAlign: 'center',
+    },
+    citiesRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    cityChip: {
+        backgroundColor: 'rgba(77,171,247,0.1)',
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        borderWidth: 1,
+        borderColor: 'rgba(77,171,247,0.2)',
+    },
+    cityChipText: {
+        fontFamily: 'Poppins_600SemiBold',
+        fontSize: 11,
+        color: UI_COLORS.brandSky,
+    },
+
     bentoContainer: { gap: 15 },
     cardLargeGlass: { height: 160, borderRadius: 30, padding: 25, backgroundColor: 'rgba(255, 255, 255, 0.4)', overflow: 'hidden' },
     cardContent: { flex: 1, justifyContent: 'center' },
@@ -541,10 +676,8 @@ const styles = StyleSheet.create({
     sideBadgeContainer: { justifyContent: 'center', alignItems: 'center', width: 40 },
     countBadge: { position: 'absolute', top: -10, right: -5, backgroundColor: UI_COLORS.errorRed, borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 5, borderWidth: 1.5, borderColor: '#FFF' },
     countText: { color: '#FFF', fontSize: 10, fontFamily: 'Poppins_700Bold' },
-
     modalOverlay: { flex: 1, alignItems: 'flex-end', paddingTop: Platform.OS === 'ios' ? 80 : 60, paddingRight: 20 },
     profilePopoverPos: { width: width * 0.8 },
-
     aiWrapper: { position: 'absolute', bottom: 30, right: 20, alignItems: 'flex-end', zIndex: 2000 },
     aiAvatarBtn: { width: 60, height: 60, borderRadius: 30, elevation: 8, shadowColor: UI_COLORS.brandSky, shadowOpacity: 0.4, shadowRadius: 12 },
     aiAvatarGradient: { flex: 1, borderRadius: 30, justifyContent: 'center', alignItems: 'center' },
@@ -559,70 +692,73 @@ const styles = StyleSheet.create({
     hubOptionText: { fontFamily: 'Poppins_600SemiBold', fontSize: 16, color: UI_COLORS.brandSky },
     hubOptionSub: { fontFamily: 'Poppins_400Regular', fontSize: 13, color: UI_COLORS.description },
     hubDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.3)', marginVertical: 5 },
+    loginAlertOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
+    loginAlertContainer: { width: '100%', borderRadius: 30, overflow: 'hidden', backgroundColor: 'transparent', elevation: 10 },
+    loginAlertContent: { alignItems: 'center', marginBottom: 24 },
+    loginAlertIconWrap: { width: 64, height: 64, borderRadius: 22, backgroundColor: UI_COLORS.palePink, justifyContent: 'center', alignItems: 'center', marginBottom: 14 },
+    loginAlertTitle: { fontFamily: 'Poppins_700Bold', fontSize: 20, color: UI_COLORS.brandSky, marginBottom: 8, textAlign: 'center' },
+    loginAlertSub: { fontFamily: 'Poppins_400Regular', fontSize: 14, color: UI_COLORS.description, textAlign: 'center', lineHeight: 22 },
+    loginAlertBtn: { borderRadius: 18, overflow: 'hidden', marginBottom: 10 },
+    loginAlertBtnGradient: { paddingVertical: 15, alignItems: 'center', borderRadius: 18 },
+    loginAlertBtnText: { color: '#FFF', fontFamily: 'Poppins_600SemiBold', fontSize: 16 },
+    loginAlertCancel: { paddingVertical: 12, alignItems: 'center' },
+    loginAlertCancelText: { color: UI_COLORS.description, fontFamily: 'Poppins_400Regular', fontSize: 14 },
 
-    // Login Alert Modal
-    loginAlertOverlay: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 30,
-    },
-    loginAlertContainer: {
-        width: '100%',
+    
+    statsFloatBtn: {
+        position: 'absolute',
+        bottom: 100,
+        right: 20,
+        width: 60,
+        height: 60,
         borderRadius: 30,
-        overflow: 'hidden',
-        backgroundColor: 'transparent',
-        elevation: 10,
+        elevation: 8,
+        shadowColor: UI_COLORS.brandSky,
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        zIndex: 1999,
     },
-    loginAlertContent: {
-        alignItems: 'center',
-        marginBottom: 24,
-    },
-    loginAlertIconWrap: {
-        width: 64,
-        height: 64,
-        borderRadius: 22,
-        backgroundColor: UI_COLORS.palePink,
+    statsFloatGradient: {
+        flex: 1,
+        borderRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 14,
     },
-    loginAlertTitle: {
-        fontFamily: 'Poppins_700Bold',
-        fontSize: 20,
-        color: UI_COLORS.brandSky,
-        marginBottom: 8,
-        textAlign: 'center',
+
+    
+    statsOverlay: {
+        ...StyleSheet.absoluteFillObject,
     },
-    loginAlertSub: {
-        fontFamily: 'Poppins_400Regular',
-        fontSize: 14,
-        color: UI_COLORS.description,
-        textAlign: 'center',
-        lineHeight: 22,
-    },
-    loginAlertBtn: {
-        borderRadius: 18,
+    statsSheet: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        borderTopLeftRadius: 35,
+        borderTopRightRadius: 35,
         overflow: 'hidden',
-        marginBottom: 10,
     },
-    loginAlertBtnGradient: {
-        paddingVertical: 15,
+    statsSheetInner: {
+        padding: 25,
+        paddingBottom: 40,
+    },
+    statsHandle: {
+        width: 40,
+        height: 5,
+        borderRadius: 3,
+        backgroundColor: 'rgba(0,0,0,0.1)',
+        alignSelf: 'center',
+        marginBottom: 20,
+    },
+    statsHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        borderRadius: 18,
+        marginBottom: 20,
     },
-    loginAlertBtnText: {
-        color: '#FFF',
-        fontFamily: 'Poppins_600SemiBold',
-        fontSize: 16,
-    },
-    loginAlertCancel: {
-        paddingVertical: 12,
-        alignItems: 'center',
-    },
-    loginAlertCancelText: {
-        color: UI_COLORS.description,
-        fontFamily: 'Poppins_400Regular',
-        fontSize: 14,
+    statsSheetTitle: {
+        fontFamily: 'Poppins_700Bold',
+        fontSize: 22,
+        color: UI_COLORS.brandSky,
     },
 });

@@ -1,8 +1,8 @@
 import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } from '@expo-google-fonts/poppins';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useRouter } from 'expo-router'; // Adăugat useNavigation și Stack
-import React, { useLayoutEffect, useRef, useState } from 'react'; // Adăugat useLayoutEffect
+import { useNavigation, useRouter } from 'expo-router';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -16,7 +16,7 @@ import {
     View
 } from 'react-native';
 
-// --- CONFIGURARE OPENAI ---
+
 const OPENAI_API_KEY = "***";
 const API_URL = "https://api.openai.com/v1/chat/completions";
 
@@ -50,7 +50,7 @@ type Message = {
 
 export default function AiAssistantScreen() {
     const router = useRouter();
-    const navigation = useNavigation(); // Inițializare navigație nativă
+    const navigation = useNavigation(); 
     const scrollRef = useRef<ScrollView>(null);
     const [messages, setMessages] = useState<Message[]>([
         { id: '0', role: 'assistant', text: 'Salut! Sunt asistentul Swaply 👋 Cu ce te pot ajuta astăzi? ✨' }
@@ -58,7 +58,7 @@ export default function AiAssistantScreen() {
     const [userQuestion, setUserQuestion] = useState('');
     const [isThinking, setIsThinking] = useState(false);
 
-    // Ascundere sincronă a barierii negre din Expo Router înainte ca layout-ul să fie desenat
+    
     useLayoutEffect(() => {
         navigation.setOptions({
             headerShown: false,

@@ -2,9 +2,9 @@ import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -27,9 +27,17 @@ const UI_COLORS = {
 
 export default function ReviewsScreen() {
     const router = useRouter();
+    const navigation = useNavigation(); 
     const [reviews, setReviews] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ home: 0, comm: 0, total: 0 });
+
+    
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerShown: false,
+        });
+    }, [navigation]);
 
     let [fontsLoaded] = useFonts({
         Poppins_400Regular,
@@ -146,9 +154,8 @@ export default function ReviewsScreen() {
             <SafeAreaView style={{ flex: 1 }}>
                 
                 <View style={styles.header}>
-                    {}
                     <TouchableOpacity onPress={() => router.back()} style={styles.circleBack}>
-                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} />
+                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} style={{ marginRight: 2 }} />
                     </TouchableOpacity>
                     <Text style={styles.titleText}>Recenziile Mele</Text>
                     <View style={{ width: 44 }} />
@@ -181,6 +188,7 @@ export default function ReviewsScreen() {
                     renderItem={renderReviewItem}
                     keyExtractor={item => item.id}
                     contentContainerStyle={styles.listContent}
+                    showsVerticalScrollIndicator={false}
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
                             <Ionicons name="chatbubble-ellipses-outline" size={80} color={UI_COLORS.brandSky} style={{ opacity: 0.3 }} />
@@ -200,20 +208,16 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { ...StyleSheet.absoluteFillObject },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    header: { padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    
-    
+    header: { paddingHorizontal: 20, marginVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    // MODIFICAT: S-a schimbat opacitatea de la 0.4 la 0.5 și s-au curățat marginile pentru a fi un cerc perfect tip sticlă
     circleBack: { 
         width: 44, 
         height: 44, 
         borderRadius: 22, 
-        backgroundColor: 'rgba(255, 255, 255, 0.4)', 
+        backgroundColor: 'rgba(255, 255, 255, 0.5)', 
         justifyContent: 'center', 
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.2)'
     }, 
-    
     titleText: { fontSize: 20, fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },
     summaryContainer: { paddingHorizontal: 20, marginBottom: 20 },
     summaryCard: { 
@@ -227,7 +231,6 @@ const styles = StyleSheet.create({
     totalStatsBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     totalRatingNum: { fontSize: 38, fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },
     totalRatingLabel: { fontSize: 11, fontFamily: 'Poppins_600SemiBold', color: UI_COLORS.mainTitle, opacity: 0.7 },
-    
     dividerVertical: { 
         width: 1, 
         height: '80%', 
@@ -238,7 +241,6 @@ const styles = StyleSheet.create({
     miniStatItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     miniStatVal: { fontSize: 18, fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },
     miniStatLabel: { fontSize: 12, fontFamily: 'Poppins_400Regular', color: UI_COLORS.description },
-
     listContent: { padding: 20, paddingBottom: 50 },
     reviewCard: { borderRadius: 20, padding: 18, marginBottom: 15, backgroundColor: 'transparent', overflow: 'hidden' }, 
     reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },

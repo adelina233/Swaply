@@ -26,7 +26,6 @@ import {
     Modal,
     Platform,
     SafeAreaView,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -54,18 +53,9 @@ const UI_COLORS = {
     btnGradient: ['#A2D2FF', '#6FB1FC'] as const
 };
 
-const ISSUE_TYPES = [
-    "Locuința nu corespunde descririi",
-    "Partenerul nu a venit la check-in",
-    "Probleme cu curățenia",
-    "Daune aduse locuinței",
-    "Partenerul nu răspunde la mesaje",
-    "Altă problemă"
-];
-
 const WEATHER_API_KEY = 'aee7f8717bac2df01d27bf32bb04be81';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 const extractCityFromAddress = (address: string): string => {
     if (!address) return "";
     const parts = address.split(',');
@@ -87,7 +77,14 @@ const getSwapProgress = (swapPeriod: string): { daysTotal: number; daysPassed: n
     return { daysTotal, daysPassed, pct, dayLabel };
 };
 
-// ─── Weather Widget ────────────────────────────────────────────────────────────
+
+const hasSwapStarted = (swapPeriod: string): boolean => {
+    const startStr = swapPeriod?.split(' -> ')?.[0]?.trim();
+    if (!startStr) return false;
+    return Date.now() >= new Date(startStr).getTime();
+};
+
+
 const WeatherWidget = ({ city }: { city: string }) => {
     const [weather, setWeather] = useState<{ temp: number; icon: string; desc: string; humidity: number; wind: number } | null>(null);
     const [loading, setLoading] = useState(true);
@@ -183,7 +180,7 @@ const wStyles = StyleSheet.create({
     cityLabel: { fontFamily: 'Poppins_600SemiBold', fontSize: 10, color: UI_COLORS.brandSky, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
 });
 
-// ─── Progress Bar ─────────────────────────────────────────────────────────────
+
 const SwapProgressBar = ({ swapPeriod }: { swapPeriod: string }) => {
     const { pct, dayLabel, daysTotal, daysPassed } = getSwapProgress(swapPeriod);
     const animWidth = useRef(new Animated.Value(0)).current;
@@ -195,6 +192,9 @@ const SwapProgressBar = ({ swapPeriod }: { swapPeriod: string }) => {
             useNativeDriver: false,
         }).start();
     }, [pct]);
+
+   
+    if (!hasSwapStarted(swapPeriod)) return null;
 
     const isNotStarted = pct === 0 && dayLabel === "Neînceput";
     const isDone = dayLabel === "Finalizat";
@@ -228,7 +228,6 @@ const SwapProgressBar = ({ swapPeriod }: { swapPeriod: string }) => {
                 }]}>
                     <LinearGradient colors={barColor} style={pStyles.fillGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
                 </Animated.View>
-                {/* Puncte de milestone */}
                 {daysTotal > 0 && [0.25, 0.5, 0.75].map((milestone) => (
                     <View
                         key={milestone}
@@ -274,7 +273,7 @@ const pStyles = StyleSheet.create({
     dateText: { fontFamily: 'Poppins_400Regular', fontSize: 10, color: UI_COLORS.description },
 });
 
-// ─── Partner Profile Modal ────────────────────────────────────────────────────
+
 const PartnerProfileModal = ({ visible, onClose, partner }: {
     visible: boolean;
     onClose: () => void;
@@ -297,12 +296,10 @@ const PartnerProfileModal = ({ visible, onClose, partner }: {
                 <TouchableOpacity activeOpacity={1} style={ppStyles.card}>
                     <LinearGradient colors={['#FFDEE9', '#B5FFFC', '#E0C3FC']} style={ppStyles.gradient}>
 
-                        {/* Header */}
                         <TouchableOpacity style={ppStyles.closeBtn} onPress={onClose}>
                             <Ionicons name="close" size={18} color={UI_COLORS.brandSky} />
                         </TouchableOpacity>
 
-                        {/* Avatar */}
                         <View style={ppStyles.avatarWrapper}>
                             {partner.photo
                                 ? <Image source={{ uri: partner.photo }} style={ppStyles.avatar} />
@@ -316,7 +313,6 @@ const PartnerProfileModal = ({ visible, onClose, partner }: {
 
                         <Text style={ppStyles.name}>{partner.name}</Text>
 
-                        {/* Rating */}
                         <View style={ppStyles.starsRow}>
                             {[1,2,3,4,5].map(s => (
                                 <Ionicons
@@ -333,7 +329,6 @@ const PartnerProfileModal = ({ visible, onClose, partner }: {
                             )}
                         </View>
 
-                        {/* Stats */}
                         <View style={ppStyles.statsRow}>
                             <View style={ppStyles.statBox}>
                                 <Text style={ppStyles.statValue}>{partner.swapCount ?? 0}</Text>
@@ -353,7 +348,6 @@ const PartnerProfileModal = ({ visible, onClose, partner }: {
                             </View>
                         </View>
 
-                        {/* Trust badge */}
                         <View style={ppStyles.trustBadge}>
                             <Ionicons name="shield-checkmark" size={14} color="#51cf66" />
                             <Text style={ppStyles.trustText}>Utilizator verificat SwapHome</Text>
@@ -389,7 +383,7 @@ const ppStyles = StyleSheet.create({
     trustText: { fontFamily: 'Poppins_600SemiBold', fontSize: 11, color: '#51cf66' },
 });
 
-// ─── Star Rating ──────────────────────────────────────────────────────────────
+
 const StarRating = ({ value, onChange, size = 36 }: { value: number; onChange: (v: number) => void; size?: number }) => {
     const scales = useRef([...Array(5)].map(() => new Animated.Value(1))).current;
     const handlePress = (star: number) => {
@@ -412,7 +406,7 @@ const StarRating = ({ value, onChange, size = 36 }: { value: number; onChange: (
     );
 };
 
-// ─── Score Badge ──────────────────────────────────────────────────────────────
+
 const ScoreBadge = ({ score }: { score: number }) => {
     const labels = ['', 'Dezamăgitor', 'Acceptabil', 'Bun', 'Foarte Bun', 'Excelent!'];
     const colors = ['', '#ff6b6b', '#ffa94d', '#74c0fc', '#63e6be', '#51cf66'];
@@ -428,7 +422,7 @@ const scoreStyles = StyleSheet.create({
     label: { fontFamily: 'Poppins_600SemiBold', fontSize: 12 },
 });
 
-// ─── Countdown Timer ──────────────────────────────────────────────────────────
+
 const CountdownTimer = ({ swapPeriod, partnerCity }: { swapPeriod: string; partnerCity: string }) => {
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, started: false, ended: false });
 
@@ -517,7 +511,7 @@ const cdStyles = StyleSheet.create({
     activeText: { fontFamily: 'Poppins_700Bold', fontSize: 13, color: '#FFF' },
 });
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
+
 export default function ActiveSwapsScreen() {
     const router = useRouter();
     const [activeSwaps, setActiveSwaps] = useState<any[]>([]);
@@ -530,12 +524,6 @@ export default function ActiveSwapsScreen() {
     const [ratingComm, setRatingComm] = useState(0);
     const [comment, setComment] = useState('');
     const [submitting, setSubmitting] = useState(false);
-
-    const [reportModal, setReportModal] = useState(false);
-    const [selectedIssueType, setSelectedIssueType] = useState('');
-    const [reportReason, setReportReason] = useState('');
-    const [reportImages, setReportImages] = useState<string[]>([]);
-    const [isReporting, setIsReporting] = useState(false);
 
     const [feedbackStep, setFeedbackStep] = useState(1);
     const stepAnim = useRef(new Animated.Value(0)).current;
@@ -590,7 +578,6 @@ export default function ActiveSwapsScreen() {
         } catch (e) { console.error("Eroare notificare:", e); }
     };
 
-    // ✅ NOU: fetch profil partener cu rating și nr schimburi
     const openPartnerProfile = async (swap: any) => {
         const isOwner = auth.currentUser?.uid === swap.ownerId;
         const partnerId = isOwner ? swap.senderId : swap.ownerId;
@@ -598,7 +585,6 @@ export default function ActiveSwapsScreen() {
         const partnerPhoto = isOwner ? (swap.senderPhoto || null) : (swap.ownerPhoto || null);
 
         try {
-            // Fetch reviews pentru partener
             const reviewsQuery = query(
                 collection(db, "reviews"),
                 where("toUserId", "==", partnerId)
@@ -610,7 +596,6 @@ export default function ActiveSwapsScreen() {
                 ? reviews.reduce((sum, r) => sum + ((r.ratingHome + r.ratingCommunication) / 2), 0) / reviews.length
                 : 0;
 
-            // Fetch număr schimburi completate
             const swapsQuery = query(
                 collection(db, "swap_requests"),
                 where("status", "==", "completed"),
@@ -618,7 +603,6 @@ export default function ActiveSwapsScreen() {
             );
             const swapsSnap = await getDocs(swapsQuery);
 
-            // Fetch data înregistrare
             const { getDoc, doc: fsDoc } = await import('firebase/firestore');
             const userSnap = await getDoc(fsDoc(db, "users", partnerId));
             const userData = userSnap.data();
@@ -636,7 +620,6 @@ export default function ActiveSwapsScreen() {
             });
             setPartnerProfileModal(true);
         } catch (e) {
-            // Fallback cu date de bază
             setPartnerProfileData({
                 name: partnerName,
                 photo: partnerPhoto,
@@ -646,40 +629,6 @@ export default function ActiveSwapsScreen() {
                 isFirstSwap: true,
             });
             setPartnerProfileModal(true);
-        }
-    };
-
-    const handleReportSubmit = async () => {
-        if (!selectedIssueType || !reportReason.trim() || !selectedSwap) {
-            Alert.alert("Eroare", "Te rugăm să alegi o categorie și să descrii problema.");
-            return;
-        }
-        setIsReporting(true);
-        try {
-            const isOwner = auth.currentUser?.uid === selectedSwap.ownerId;
-            const partnerId = isOwner ? selectedSwap.senderId : selectedSwap.ownerId;
-            const partnerName = isOwner ? (selectedSwap.senderName || "Partener") : (selectedSwap.ownerName || "Proprietar");
-            await addDoc(collection(db, "disputes"), {
-                swapId: selectedSwap.id,
-                reportedBy: auth.currentUser?.uid,
-                reportedByName: auth.currentUser?.displayName || "Utilizator",
-                partnerId: partnerId || "unknown",
-                partnerName,
-                issueType: selectedIssueType,
-                reason: reportReason,
-                evidencePhotos: reportImages,
-                status: 'open',
-                createdAt: serverTimestamp()
-            });
-            Alert.alert("Raport trimis", "Echipa noastră va analiza sesizarea ta în cel mai scurt timp.");
-            setReportModal(false);
-            setReportReason('');
-            setSelectedIssueType('');
-            setReportImages([]);
-        } catch (e) {
-            Alert.alert("Eroare", "Nu s-a putut trimite raportul.");
-        } finally {
-            setIsReporting(false);
         }
     };
 
@@ -702,22 +651,6 @@ export default function ActiveSwapsScreen() {
                 Alert.alert("Eroare", "Eșec la actualizarea statusului.");
             }
         };
-
-        if (actionType === 'check-in') {
-            const startDateStr = swap.swapPeriod?.split(' -> ')?.[0]?.trim();
-            if (startDateStr) {
-                const now = new Date().getTime();
-                const start = new Date(startDateStr).getTime();
-                if (now < start) {
-                    Alert.alert(
-                        "Schimb Inactiv",
-                        "Schimbul nu este încă activ conform perioadei alese. Ești sigur că vrei să faci check-in înainte de termen?",
-                        [{ text: "Anulează", style: "cancel" }, { text: "Da, sunt sigur", onPress: updateStatusInFirestore }]
-                    );
-                    return;
-                }
-            }
-        }
 
         Alert.alert("Confirmare", `Ești sigur că vrei să confirmi ${actionType}?`, [
             { text: "Anulează", style: "cancel" },
@@ -787,7 +720,6 @@ export default function ActiveSwapsScreen() {
         const partnerName = isOwner ? (item.senderName || "Partener") : (item.ownerName || "Proprietar");
         const partnerPhoto = isOwner ? (item.senderPhoto || null) : (item.ownerPhoto || null);
 
-        
         const myDestinationCity = isOwner
             ? (item.senderCity || extractCityFromAddress(item.senderAddressInput || ""))
             : (item.targetCity || extractCityFromAddress(item.addressInput || ""));
@@ -802,6 +734,9 @@ export default function ActiveSwapsScreen() {
         const partnerCheckoutTime = item[`${partnerPrefix}_checkout_at`]?.seconds || 0;
         const iAmLastCheckout = myCheckoutTime >= partnerCheckoutTime;
 
+       
+        const swapStarted = hasSwapStarted(item.swapPeriod);
+
         let canFeedback = false;
         let waitingMessage = "Așteaptă Finalizare";
         if (myCheckout && partnerCheckout) {
@@ -813,7 +748,6 @@ export default function ActiveSwapsScreen() {
         return (
             <BlurView intensity={80} tint="light" style={styles.focusCard}>
 
-                {/* Top actions */}
                 <View style={styles.topCardActions}>
                     <TouchableOpacity
                         style={styles.receiptAction}
@@ -833,7 +767,6 @@ export default function ActiveSwapsScreen() {
                     <Ionicons name="swap-horizontal" size={24} color={UI_COLORS.brandSky} />
                     <TouchableOpacity style={styles.aptBlock} onPress={() => openPartnerProfile(item)} activeOpacity={0.8}>
                         <Image source={{ uri: partnerAptImg || 'https://via.placeholder.com/150' }} style={styles.heroImg} />
-                        {}
                         {partnerPhoto && (
                             <View style={styles.partnerAvatarOverlay}>
                                 <Image source={{ uri: partnerPhoto }} style={styles.partnerAvatarSmall} />
@@ -846,7 +779,7 @@ export default function ActiveSwapsScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/*Bara de progres*/}
+                {}
                 <SwapProgressBar swapPeriod={item.swapPeriod} />
 
                 {}
@@ -858,54 +791,63 @@ export default function ActiveSwapsScreen() {
                 ) : null}
 
                 {}
-                <View style={styles.checklistContainer}>
-                    <View style={styles.checkColumn}>
-                        <Text style={styles.checkTitle}>Tu</Text>
-                        <StatusIndicator label="Check-in" done={myCheckin} />
-                        <StatusIndicator label="Check-out" done={myCheckout} />
-                    </View>
-                    <View style={styles.verticalDivider} />
-                    <View style={styles.checkColumn}>
-                        <Text style={styles.checkTitle}>Partener</Text>
-                        <StatusIndicator label="Check-in" done={partnerCheckin} />
-                        <StatusIndicator label="Check-out" done={partnerCheckout} />
-                    </View>
-                </View>
+                {swapStarted && (
+                    <>
+                        <View style={styles.checklistContainer}>
+                            <View style={styles.checkColumn}>
+                                <Text style={styles.checkTitle}>Tu</Text>
+                                <StatusIndicator label="Check-in" done={myCheckin} />
+                                <StatusIndicator label="Check-out" done={myCheckout} />
+                            </View>
+                            <View style={styles.verticalDivider} />
+                            <View style={styles.checkColumn}>
+                                <Text style={styles.checkTitle}>Partener</Text>
+                                <StatusIndicator label="Check-in" done={partnerCheckin} />
+                                <StatusIndicator label="Check-out" done={partnerCheckout} />
+                            </View>
+                        </View>
+
+                        <View style={styles.footerActions}>
+                            {!myCheckin ? (
+                                <TouchableOpacity style={styles.mainBtnWrapper} onPress={() => handleAction(item, 'check-in')}>
+                                    <LinearGradient colors={UI_COLORS.btnGradient} style={styles.mainBtnGradient}>
+                                        <Text style={styles.mainBtnText}>Confirmă Check-in</Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            ) : !myCheckout ? (
+                                <TouchableOpacity style={[styles.mainBtn, { backgroundColor: UI_COLORS.successPastel }]} onPress={() => handleAction(item, 'check-out')}>
+                                    <Text style={[styles.mainBtnText, { color: UI_COLORS.successText }]}>Confirmă Check-out</Text>
+                                </TouchableOpacity>
+                            ) : (
+                                <TouchableOpacity
+                                    style={styles.mainBtnWrapper}
+                                    disabled={!canFeedback}
+                                    onPress={() => { setSelectedSwap(item); setFeedbackStep(1); setFeedbackModal(true); }}
+                                >
+                                    <LinearGradient
+                                        colors={canFeedback ? UI_COLORS.btnGradient : ['#E2E8F0', '#CBD5E1']}
+                                        style={styles.mainBtnGradient}
+                                    >
+                                        <Text style={[styles.mainBtnText, !canFeedback && { color: '#94A3B8' }]}>
+                                            {canFeedback ? "⭐ Lasă Feedback" : waitingMessage}
+                                        </Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </>
+                )}
 
                 {}
-                <View style={styles.footerActions}>
-                    {!myCheckin ? (
-                        <TouchableOpacity style={styles.mainBtnWrapper} onPress={() => handleAction(item, 'check-in')}>
-                            <LinearGradient colors={UI_COLORS.btnGradient} style={styles.mainBtnGradient}>
-                                <Text style={styles.mainBtnText}>Confirmă Check-in</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    ) : !myCheckout ? (
-                        <TouchableOpacity style={[styles.mainBtn, { backgroundColor: UI_COLORS.successPastel }]} onPress={() => handleAction(item, 'check-out')}>
-                            <Text style={[styles.mainBtnText, { color: UI_COLORS.successText }]}>Confirmă Check-out</Text>
-                        </TouchableOpacity>
-                    ) : (
-                        <TouchableOpacity
-                            style={styles.mainBtnWrapper}
-                            disabled={!canFeedback}
-                            onPress={() => { setSelectedSwap(item); setFeedbackStep(1); setFeedbackModal(true); }}
-                        >
-                            <LinearGradient
-                                colors={canFeedback ? UI_COLORS.btnGradient : ['#E2E8F0', '#CBD5E1']}
-                                style={styles.mainBtnGradient}
-                            >
-                                <Text style={[styles.mainBtnText, !canFeedback && { color: '#94A3B8' }]}>
-                                    {canFeedback ? "⭐ Lasă Feedback" : waitingMessage}
-                                </Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    )}
-                </View>
+                {!swapStarted && (
+                    <View style={styles.notStartedNotice}>
+                        <Ionicons name="time-outline" size={16} color={UI_COLORS.brandSky} />
+                        <Text style={styles.notStartedText}>
+                            Check-in disponibil din {item.swapPeriod?.split(' -> ')?.[0]}
+                        </Text>
+                    </View>
+                )}
 
-                <TouchableOpacity style={styles.reportTextButton} onPress={() => { setSelectedSwap(item); setReportModal(true); }}>
-                    <Ionicons name="alert-circle" size={16} color={UI_COLORS.errorRed} />
-                    <Text style={styles.reportButtonText}>Raportează o problemă</Text>
-                </TouchableOpacity>
             </BlurView>
         );
     };
@@ -934,7 +876,6 @@ export default function ActiveSwapsScreen() {
 
             {showConfetti && <ConfettiCannon count={200} origin={{ x: width / 2, y: -20 }} fadeOut />}
 
-            {}
             <PartnerProfileModal
                 visible={partnerProfileModal}
                 onClose={() => setPartnerProfileModal(false)}
@@ -942,91 +883,6 @@ export default function ActiveSwapsScreen() {
             />
 
             {}
-            <Modal visible={reportModal} animationType="slide" transparent>
-                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-                    <View style={styles.modalOverlayFull}>
-                        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                            <View style={styles.reportSheet}>
-                                <View style={styles.reportHandle} />
-                                <LinearGradient colors={['#ff6b9d22', '#ff4d6d11']} style={styles.reportHeaderGradient}>
-                                    <View style={styles.reportHeaderContent}>
-                                        <View style={styles.reportIconCircle}>
-                                            <LinearGradient colors={['#ff6b9d', '#ff4d6d']} style={styles.reportIconBg}>
-                                                <Ionicons name="shield-checkmark" size={28} color="#FFF" />
-                                            </LinearGradient>
-                                        </View>
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={styles.reportTitle}>Centru Suport</Text>
-                                            <Text style={styles.reportSubtitle}>Vom analiza sesizarea în 24h</Text>
-                                        </View>
-                                        <TouchableOpacity onPress={() => setReportModal(false)} style={styles.reportCloseBtn}>
-                                            <Ionicons name="close" size={20} color={UI_COLORS.errorRed} />
-                                        </TouchableOpacity>
-                                    </View>
-                                </LinearGradient>
-                                <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
-                                    <View style={styles.reportBody}>
-                                        <Text style={styles.reportSectionLabel}>Ce s-a întâmplat?</Text>
-                                        <View style={styles.pickerContainer}>
-                                            {ISSUE_TYPES.map((issue, index) => {
-                                                const icons = ['home-outline', 'person-remove-outline', 'sparkles-outline', 'warning-outline', 'chatbubble-ellipses-outline', 'ellipsis-horizontal-circle-outline'];
-                                                const isSelected = selectedIssueType === issue;
-                                                return (
-                                                    <TouchableOpacity
-                                                        key={issue}
-                                                        style={[styles.issueOption, isSelected && styles.issueOptionSelected]}
-                                                        onPress={() => setSelectedIssueType(issue)}
-                                                    >
-                                                        <View style={[styles.issueIconWrap, isSelected && styles.issueIconWrapSelected]}>
-                                                            <Ionicons name={icons[index] as any} size={18} color={isSelected ? '#FFF' : UI_COLORS.errorRed} />
-                                                        </View>
-                                                        <Text style={[styles.issueOptionText, isSelected && styles.issueOptionTextSelected]}>{issue}</Text>
-                                                        {isSelected && (
-                                                            <View style={styles.issueCheck}>
-                                                                <Ionicons name="checkmark" size={14} color={UI_COLORS.errorRed} />
-                                                            </View>
-                                                        )}
-                                                    </TouchableOpacity>
-                                                );
-                                            })}
-                                        </View>
-                                        <Text style={[styles.reportSectionLabel, { marginTop: 20 }]}>Descrie problema</Text>
-                                        <View style={styles.reportInputWrapper}>
-                                            <Ionicons name="create-outline" size={18} color={UI_COLORS.errorRed} style={{ marginTop: 2 }} />
-                                            <TextInput
-                                                style={styles.reportInput}
-                                                placeholder="Explică ce s-a întâmplat în detaliu..."
-                                                placeholderTextColor="#CBD5E1"
-                                                multiline
-                                                value={reportReason}
-                                                onChangeText={setReportReason}
-                                            />
-                                        </View>
-                                        <View style={styles.reportInfoBox}>
-                                            <Ionicons name="information-circle-outline" size={18} color={UI_COLORS.brandSky} />
-                                            <Text style={styles.reportInfoText}>Sesizarea ta este confidențială. Echipa noastră va contacta ambele părți pentru investigație.</Text>
-                                        </View>
-                                        <TouchableOpacity
-                                            style={[styles.reportSubmitBtn, (!selectedIssueType || !reportReason.trim()) && { opacity: 0.5 }]}
-                                            onPress={handleReportSubmit}
-                                            disabled={isReporting || !selectedIssueType || !reportReason.trim()}
-                                        >
-                                            <LinearGradient colors={['#ff6b9d', '#ff4d6d']} style={styles.reportSubmitGradient}>
-                                                {isReporting ? <ActivityIndicator color="#FFF" /> : <>
-                                                    <Ionicons name="send" size={18} color="#FFF" />
-                                                    <Text style={styles.reportSubmitText}>Trimite Sesizarea</Text>
-                                                </>}
-                                            </LinearGradient>
-                                        </TouchableOpacity>
-                                    </View>
-                                </ScrollView>
-                            </View>
-                        </TouchableWithoutFeedback>
-                    </View>
-                </KeyboardAvoidingView>
-            </Modal>
-
-            {/* Feedback Modal */}
             <Modal visible={feedbackModal} animationType="slide" transparent>
                 <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
                     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -1174,7 +1030,6 @@ const styles = StyleSheet.create({
     heroSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     aptBlock: { alignItems: 'center', width: width * 0.35 },
     heroImg: { width: 90, height: 90, borderRadius: 20, marginBottom: 8, backgroundColor: '#EEE' },
-    
     partnerAvatarOverlay: { position: 'absolute', bottom: 22, right: 0, borderRadius: 14, borderWidth: 2, borderColor: '#FFF', overflow: 'hidden' },
     partnerAvatarSmall: { width: 28, height: 28 },
     partnerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
@@ -1193,37 +1048,19 @@ const styles = StyleSheet.create({
     mainBtnWrapper: { flex: 1, height: 55, borderRadius: 18, overflow: 'hidden' },
     mainBtnGradient: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' },
     mainBtnText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 14 },
-    reportTextButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 15, paddingVertical: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', gap: 6 },
-    reportButtonText: { color: UI_COLORS.errorRed, fontFamily: 'Poppins_600SemiBold', fontSize: 12 },
+    notStartedNotice: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: 'rgba(77,171,247,0.1)',
+        borderRadius: 14,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        marginTop: 4,
+    },
+    notStartedText: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, color: UI_COLORS.brandSky, flex: 1 },
     emptyText: { textAlign: 'center', marginTop: 50, color: UI_COLORS.description, fontFamily: 'Poppins_400Regular' },
     overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.55)' },
-    modalOverlayFull: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-    reportSheet: { width: '100%', height: height * 0.90, borderTopLeftRadius: 36, borderTopRightRadius: 36, backgroundColor: '#FAFBFF', overflow: 'hidden' },
-    reportHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginTop: 12, marginBottom: 4 },
-    reportHeaderGradient: { paddingHorizontal: 20, paddingVertical: 16 },
-    reportHeaderContent: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-    reportIconCircle: { borderRadius: 28 },
-    reportIconBg: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
-    reportTitle: { fontFamily: 'Poppins_700Bold', fontSize: 20, color: UI_COLORS.errorRed },
-    reportSubtitle: { fontFamily: 'Poppins_400Regular', fontSize: 12, color: '#94A3B8', marginTop: 2 },
-    reportCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#fff0f3', justifyContent: 'center', alignItems: 'center' },
-    reportBody: { padding: 20, paddingBottom: 40 },
-    reportSectionLabel: { fontFamily: 'Poppins_700Bold', fontSize: 14, color: UI_COLORS.mainTitle, marginBottom: 12 },
-    pickerContainer: { gap: 8 },
-    issueOption: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 18, backgroundColor: '#FFF', borderWidth: 1.5, borderColor: '#F0F4FF' },
-    issueOptionSelected: { borderColor: UI_COLORS.errorRed, backgroundColor: '#fff0f3' },
-    issueIconWrap: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#fff0f3', justifyContent: 'center', alignItems: 'center' },
-    issueIconWrapSelected: { backgroundColor: UI_COLORS.errorRed },
-    issueOptionText: { flex: 1, fontFamily: 'Poppins_500Medium', fontSize: 13, color: UI_COLORS.mainTitle },
-    issueOptionTextSelected: { color: UI_COLORS.errorRed, fontFamily: 'Poppins_700Bold' },
-    issueCheck: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff0f3', justifyContent: 'center', alignItems: 'center' },
-    reportInputWrapper: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: '#FFF', borderRadius: 20, padding: 16, borderWidth: 1.5, borderColor: '#E2E8F0' },
-    reportInput: { flex: 1, fontFamily: 'Poppins_400Regular', fontSize: 14, color: UI_COLORS.mainTitle, height: 90, textAlignVertical: 'top' },
-    reportInfoBox: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: '#EFF8FF', borderRadius: 16, padding: 14, marginTop: 16 },
-    reportInfoText: { flex: 1, fontFamily: 'Poppins_400Regular', fontSize: 12, color: UI_COLORS.brandSky, lineHeight: 18 },
-    reportSubmitBtn: { marginTop: 24, borderRadius: 20, overflow: 'hidden' },
-    reportSubmitGradient: { height: 58, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
-    reportSubmitText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 16 },
     feedbackSheet: { width: '92%', borderRadius: 35, overflow: 'hidden', elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 20 },
     feedbackSheetInner: { padding: 28, paddingBottom: 32 },
     fbHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },

@@ -2,8 +2,8 @@ import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } fr
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useNavigation, useRouter } from 'expo-router'; // Adăugat useNavigation și Stack
+import React, { useLayoutEffect, useState } from 'react'; // Adăugat useLayoutEffect
 import {
     ActivityIndicator,
     Alert,
@@ -65,9 +65,17 @@ const FloatingInput = ({ label, value, onChangeText, keyboardType = "default" }:
 
 export default function ForgotPasswordScreen() {
     const router = useRouter();
+    const navigation = useNavigation(); // Inițializare navigație nativă
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [emailSent, setEmailSent] = useState(false);
+
+    // Ascundere sincronă a barierii negre din Expo Router înainte ca layout-ul să fie desenat
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerShown: false,
+        });
+    }, [navigation]);
 
     let [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold });
 
@@ -99,13 +107,16 @@ export default function ForgotPasswordScreen() {
         <View style={styles.container}>
             <LinearGradient colors={['#FFDEE9', '#B5FFFC', '#E0C3FC']} style={styles.background} />
             <SafeAreaView style={styles.safeArea}>
+                {/* MODIFICAT: S-a adăugat header-ul nativ cu butonul de back circular și transparent */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} style={{ marginRight: 2 }} />
+                    </TouchableOpacity>
+                    <View style={{ width: 44 }} />
+                </View>
+
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
                     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-                        {/* Buton înapoi */}
-                        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                            <Ionicons name="arrow-back" size={22} color={UI_COLORS.brandSky} />
-                        </TouchableOpacity>
 
                         <View style={styles.headerSection}>
                             <View style={styles.iconCircle}>
@@ -117,7 +128,6 @@ export default function ForgotPasswordScreen() {
                             </View>
 
                             {emailSent ? (
-                                // Stare după trimitere
                                 <>
                                     <Text style={styles.title}>Email trimis!</Text>
                                     <Text style={styles.subtitle}>
@@ -154,7 +164,6 @@ export default function ForgotPasswordScreen() {
                                     </TouchableOpacity>
                                 </>
                             ) : (
-                                // Stare inițială — formular
                                 <>
                                     <Text style={styles.title}>Ai uitat parola?</Text>
                                     <Text style={styles.subtitle}>
@@ -205,26 +214,18 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { ...StyleSheet.absoluteFillObject },
     safeArea: { flex: 1 },
-    scrollContent: { padding: 30, flexGrow: 1, justifyContent: 'center' },
-
-    backBtn: {
-        position: 'absolute',
-        top: 10,
-        left: 0,
-        padding: 8,
-        zIndex: 10,
-    },
-
-    headerSection: { alignItems: 'center', marginTop: 40 },
+    // Adăugat design-ul structurat pentru zona de top header
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 10 },
+    backButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' },
+    scrollContent: { paddingHorizontal: 30, paddingBottom: 30, flexGrow: 1, justifyContent: 'center' },
+    headerSection: { alignItems: 'center', width: '100%' },
     iconCircle: {
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 10,
     },
-
     title: { fontSize: 30, fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky, textAlign: 'center' },
     subtitle: { fontSize: 15, fontFamily: 'Poppins_400Regular', color: UI_COLORS.sectionLabel, marginTop: 6, textAlign: 'center', lineHeight: 22 },
-
     formContainer: { gap: 12, width: '100%', marginTop: 24 },
     inputContainer: { marginBottom: 5 },
     glassInput: { height: 64, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
@@ -233,16 +234,12 @@ const styles = StyleSheet.create({
     labelNormal: { fontSize: 15, top: 20 },
     labelFloating: { fontSize: 11, top: 8, color: UI_COLORS.brandSky, fontFamily: 'Poppins_600SemiBold' },
     textInput: { fontSize: 15, color: UI_COLORS.inputText, fontFamily: 'Poppins_400Regular', height: '100%', width: '100%' },
-
     mainButton: { marginTop: 8, borderRadius: 18, overflow: 'hidden', width: '100%' },
     gradientBtn: { height: 58, justifyContent: 'center', alignItems: 'center' },
     buttonText: { color: '#FFF', fontSize: 16, fontFamily: 'Poppins_700Bold' },
-
     switchButton: { marginTop: 25, alignItems: 'center' },
     switchText: { color: UI_COLORS.description, fontSize: 14, fontFamily: 'Poppins_400Regular' },
     switchTextBold: { fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },
-
-    
     infoCard: {
         marginTop: 28,
         borderRadius: 18,
@@ -270,7 +267,6 @@ const styles = StyleSheet.create({
         color: UI_COLORS.description,
         textAlign: 'center',
     },
-
     retryBtn: { marginTop: 16, alignItems: 'center' },
     retryText: { fontSize: 13, fontFamily: 'Poppins_600SemiBold', color: UI_COLORS.brandSky },
 });

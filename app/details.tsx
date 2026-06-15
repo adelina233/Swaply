@@ -2,8 +2,8 @@ import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } fr
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -59,6 +59,12 @@ interface NearbyPoi {
 export default function DetailsScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
+    const navigation = useNavigation();
+
+   
+    useLayoutEffect(() => {
+        navigation.setOptions({ headerShown: false });
+    }, [navigation]);
 
     const [apartment, setApartment] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -393,7 +399,7 @@ export default function DetailsScreen() {
 
                     <SafeAreaView style={styles.backButtonContainer}>
                         <TouchableOpacity onPress={() => router.back()} style={styles.roundButton}>
-                            <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} style={styles.iconOffset} />
+                            <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} />
                         </TouchableOpacity>
                     </SafeAreaView>
                 </View>
@@ -415,12 +421,12 @@ export default function DetailsScreen() {
                     </View>
 
                     <Text style={styles.sectionTitle}>În apropiere și conectivitate</Text>
-                    <View style={styles.poiContainer}>
+                    <BlurView intensity={50} tint="light" style={styles.poiContainer}>
                         {centerRouteDuration && (
-                            <BlurView intensity={40} tint="light" style={styles.routingInfoBadge}>
+                            <View style={styles.routingInfoBadge}>
                                 <Ionicons name="navigate-circle" size={18} color={UI_COLORS.brandSky} />
                                 <Text style={styles.routingInfoText}>{centerRouteDuration}</Text>
-                            </BlurView>
+                            </View>
                         )}
                         <View style={styles.poiGrid}>
                             {nearbyPois.map((poi, idx) => (
@@ -453,7 +459,7 @@ export default function DetailsScreen() {
                                 </TouchableOpacity>
                             ))}
                         </View>
-                    </View>
+                    </BlurView>
 
                     <View style={styles.ownerProfileRow}>
                         <Image source={{ uri: apartment.userPhoto }} style={styles.ownerAvatar} />
@@ -547,27 +553,43 @@ export default function DetailsScreen() {
                         </MapView>
                     </View>
 
-                    <View style={{ height: isOwner ? 60 : 180 }} />
+                    <View style={{ height: isOwner ? 60 : 200 }} />
                 </BlurView>
             </ScrollView>
 
             {!isOwner && (
                 <BlurView intensity={100} tint="light" style={styles.bottomBar}>
                     <View style={styles.actionContainer}>
-                        <TouchableOpacity activeOpacity={0.9} style={styles.btnWrapper} onPress={() => handleAction('chat')} disabled={sending}>
-                            <LinearGradient colors={[UI_COLORS.softBlue, UI_COLORS.buttonBlue]} style={styles.mainActionBtn}>
+
+                        {}
+                        <TouchableOpacity
+                            style={styles.btnWrapper}
+                            onPress={() => handleAction('chat')}
+                            disabled={sending}
+                            activeOpacity={0.85}
+                        >
+                            <LinearGradient
+                                colors={[UI_COLORS.softBlue, UI_COLORS.buttonBlue]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.mainActionBtn}
+                            >
                                 {sending ? <ActivityIndicator color="#FFF" /> : (
                                     <View style={styles.btnContent}>
                                         <Ionicons name="chatbubbles" size={20} color="#FFF" />
-                                        <Text style={styles.mainActionText}>Întreabă-l pe {apartment.userName?.split(' ')[0]}</Text>
+                                        <Text style={styles.mainActionText}>
+                                            Întreabă-l pe {apartment.userName?.split(' ')[0]}
+                                        </Text>
                                     </View>
                                 )}
                             </LinearGradient>
                         </TouchableOpacity>
 
+                        {}
                         <TouchableOpacity
                             style={[styles.secondaryBtn, !hasMyApartment && styles.secondaryBtnDisabled]}
                             onPress={() => handleAction('swap')}
+                            activeOpacity={0.75}
                         >
                             <View style={styles.secondaryBtnContent}>
                                 {!hasMyApartment && (
@@ -578,6 +600,7 @@ export default function DetailsScreen() {
                                 </Text>
                             </View>
                         </TouchableOpacity>
+
                     </View>
                 </BlurView>
             )}
@@ -597,9 +620,7 @@ const styles = StyleSheet.create({
     apartmentSlider: { marginTop: -20, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' },
     headerImage: { width: width, height: 280, resizeMode: 'cover' },
     backButtonContainer: { position: 'absolute', top: 20, left: 20 },
-    // Configurat pentru cerc perfect: laturi egale și jumătate din dimensiune la radius
-    roundButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.7)', justifyContent: 'center', alignItems: 'center' },
-    iconOffset: { marginRight: 2 },
+    roundButton: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.7)', justifyContent: 'center', alignItems: 'center' },
     contentCard: { marginTop: -40, borderTopLeftRadius: 35, borderTopRightRadius: 35, padding: 25, minHeight: 800 },
     indicator: { width: 40, height: 5, backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: 10, alignSelf: 'center', marginBottom: 20 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
@@ -608,12 +629,11 @@ const styles = StyleSheet.create({
     locationText: { fontFamily: 'Poppins_400Regular', color: UI_COLORS.description, fontSize: 13, marginLeft: 5 },
     sizeBadge: { backgroundColor: 'rgba(77, 171, 247, 0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 15, height: 38 },
     sizeText: { fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky, fontSize: 14 },
-    // Efect curat de sticlă transparentă pentru containerele de API
-    poiContainer: { marginBottom: 20 },
-    routingInfoBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.3)', padding: 12, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', overflow: 'hidden' },
+    poiContainer: { padding: 15, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' },
+    routingInfoBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.7)', padding: 10, borderRadius: 12, marginBottom: 12 },
     routingInfoText: { fontFamily: 'Poppins_600SemiBold', fontSize: 13, color: UI_COLORS.brandSky, marginLeft: 8 },
     poiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
-    poiItem: { width: '48%', backgroundColor: 'rgba(255,255,255,0.35)', padding: 12, borderRadius: 16, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
+    poiItem: { width: '48%', backgroundColor: 'rgba(255,255,255,0.5)', padding: 12, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
     poiLabel: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, color: UI_COLORS.brandSky },
     poiDistance: { fontFamily: 'Poppins_400Regular', fontSize: 11, color: UI_COLORS.description },
     ownerProfileRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.3)', padding: 12, borderRadius: 20 },
@@ -645,9 +665,9 @@ const styles = StyleSheet.create({
     bottomBar: { position: 'absolute', bottom: 0, width: '100%', paddingHorizontal: 25, paddingTop: 20, paddingBottom: 40, borderTopLeftRadius: 30, borderTopRightRadius: 30 },
     actionContainer: { gap: 10 },
     btnWrapper: { borderRadius: 18, overflow: 'hidden' },
-    mainActionBtn: { height: 58, justifyContent: 'center', alignItems: 'center' },
-    btnContent: { flexDirection: 'row', alignItems: 'center' },
-    mainActionText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 16, marginLeft: 10 },
+    mainActionBtn: { height: 58, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+    btnContent: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    mainActionText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 16 },
     secondaryBtn: { paddingVertical: 10, alignItems: 'center' },
     secondaryBtnDisabled: { opacity: 0.6 },
     secondaryBtnContent: { flexDirection: 'row', alignItems: 'center' },

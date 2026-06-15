@@ -2,8 +2,8 @@ import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } fr
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useNavigation, useRouter } from 'expo-router';
+import React, { useLayoutEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -76,6 +76,7 @@ const FloatingInput = ({ label, value, onChangeText, secureTextEntry = false, ke
 
 export default function AuthScreen() {
     const router = useRouter();
+    const navigation = useNavigation(); 
     const [isLogin, setIsLogin] = useState(true);
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -85,9 +86,15 @@ export default function AuthScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerShown: false,
+        });
+    }, [navigation]);
+
     let [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold });
 
-    const handleAuth = async () => {
+    const handleAppAuth = async () => {
         if (!email || !password) {
             Alert.alert("Eroare", "Te rugăm să completezi datele.");
             return;
@@ -116,6 +123,14 @@ export default function AuthScreen() {
         <View style={styles.container}>
             <LinearGradient colors={['#FFDEE9', '#B5FFFC', '#E0C3FC']} style={styles.background} />
             <SafeAreaView style={styles.safeArea}>
+                {}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} style={{ marginRight: 2 }} />
+                    </TouchableOpacity>
+                    <View style={{ width: 44 }} />
+                </View>
+
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
                     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
@@ -128,7 +143,7 @@ export default function AuthScreen() {
                                 />
                             </View>
                             <Text style={styles.title}>{isLogin ? 'Loghează-te' : 'Creează cont'}</Text>
-                            <Text style={styles.subtitle}>Alătură-te comunității <Text style={{ color: UI_COLORS.brandSky, fontFamily: 'Poppins_700Bold' }}>SwapHome</Text></Text>
+                            <Text style={styles.subtitle}>Alătură-te comunității <Text style={{ color: UI_COLORS.brandSky, fontFamily: 'Poppins_700Bold' }}>Swaply</Text></Text>
                         </View>
 
                         <View style={styles.formContainer}>
@@ -149,7 +164,6 @@ export default function AuthScreen() {
                                 onEyePress={() => setShowPassword(!showPassword)}
                             />
 
-                            {/* Link "Ai uitat parola?" — vizibil doar pe ecranul de login */}
                             {isLogin && (
                                 <TouchableOpacity
                                     onPress={() => router.push('/forgot-password')}
@@ -159,7 +173,7 @@ export default function AuthScreen() {
                                 </TouchableOpacity>
                             )}
 
-                            <TouchableOpacity style={styles.mainButton} onPress={handleAuth} disabled={loading}>
+                            <TouchableOpacity style={styles.mainButton} onPress={handleAppAuth} disabled={loading}>
                                 <LinearGradient
                                     colors={[UI_COLORS.softBlue, UI_COLORS.buttonBlue]}
                                     start={{ x: 0, y: 0 }}
@@ -189,8 +203,10 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { ...StyleSheet.absoluteFillObject },
     safeArea: { flex: 1 },
-    scrollContent: { padding: 30, flexGrow: 1, justifyContent: 'center' },
-    headerSection: { alignItems: 'center', marginBottom: 30 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 10 },
+    backButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' },
+    scrollContent: { paddingHorizontal: 30, paddingBottom: 30, flexGrow: 1, justifyContent: 'center' },
+    headerSection: { alignItems: 'center', marginBottom: 20 },
     iconCircle: {
         justifyContent: 'center',
         alignItems: 'center',

@@ -342,21 +342,26 @@ const styles = StyleSheet.create({
     safeArea: { flex: 1 },
     scrollContent: { padding: 25 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    // MODIFICAT: S-a schimbat opacitatea de la 0.7 la 0.5 pentru a fi la fel ca pe celelalte pagini
     backButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' },
     headerTitle: { fontSize: 22, fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },
+    
+    // Avatar modificat (fără margini albe)
     avatarSection: { alignItems: 'center', marginBottom: 30 },
     avatarWrapper: { position: 'relative' },
-    mainAvatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: '#FFF' },
+    mainAvatar: { width: 110, height: 110, borderRadius: 55 }, 
     editBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: UI_COLORS.brandSky, width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF' },
+    
     formContainer: { gap: 15 },
     sectionTitle: { fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: UI_COLORS.sectionLabel, marginTop: 5, marginBottom: 2 },
-    languageGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 10 },
-    languageItem: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, backgroundColor: 'rgba(255, 255, 255, 0.4)', borderWidth: 1, borderColor: 'rgba(77, 171, 247, 0.1)' },
+    
+    // Grid nou de limbi: aranjat pe 3 coloane egale (3 x 2)
+    languageGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 10 },
+    languageItem: { width: '31%', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12, backgroundColor: 'rgba(255, 255, 255, 0.4)', borderWidth: 1, borderColor: 'rgba(77, 171, 247, 0.1)', marginBottom: 10 },
     languageItemActive: { backgroundColor: UI_COLORS.brandSky, borderColor: UI_COLORS.brandSky },
-    languageFlag: { fontSize: 16 },
-    languageLabel: { fontSize: 13, fontFamily: 'Poppins_400Regular', color: UI_COLORS.inputText },
+    languageFlag: { fontSize: 22 }, 
+    languageLabel: { fontSize: 11, fontFamily: 'Poppins_400Regular', color: UI_COLORS.inputText, textAlign: 'center' },
     languageLabelActive: { color: '#FFF', fontFamily: 'Poppins_600SemiBold' },
+    
     inputContainer: { marginBottom: 5 },
     glassInput: { height: 64, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
     textContainer: { flex: 1, justifyContent: 'center' },

@@ -1,7 +1,8 @@
 import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } from '@expo-google-fonts/poppins';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import {
     collection,
     deleteDoc,
@@ -14,7 +15,7 @@ import {
     where,
     writeBatch
 } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -35,13 +36,22 @@ const UI_COLORS = {
     description: '#4A5568',
     white: '#FFFFFF',
     errorRed: '#ff4d6d',
+    warningGold: '#acccff', 
+    mutedGrey: '#a0aec0',   
     appGradient: ['#FFDEE9', '#B5FFFC', '#E0C3FC'] as const
 };
 
 export default function NotificationsScreen() {
     const router = useRouter();
+    const navigation = useNavigation(); 
     const [notifications, setNotifications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerShown: false,
+        });
+    }, [navigation]);
 
     let [fontsLoaded] = useFonts({
         Poppins_400Regular,
@@ -131,17 +141,6 @@ export default function NotificationsScreen() {
         }
     };
 
-    const getIcon = (type: string) => {
-        switch (type) {
-            case 'favorite': return { name: 'heart', color: '#ff6b6b' };
-            case 'message': return { name: 'chatbubbles', color: '#4dabf7' };
-            case 'new_offer': return { name: 'paper-plane', color: '#51cf66' };
-            case 'swap_active': return { name: 'sync-circle', color: '#f59f00' };
-            case 'review': return { name: 'star', color: '#845ef7' };
-            default: return { name: 'notifications', color: '#adb5bd' };
-        }
-    };
-
     const renderRightActions = (id: string) => {
         return (
             <TouchableOpacity 
@@ -184,8 +183,12 @@ export default function NotificationsScreen() {
                             data={notifications}
                             keyExtractor={item => item.id}
                             contentContainerStyle={styles.listContent}
+                            showsVerticalScrollIndicator={false}
                             renderItem={({ item }) => {
-                                const icon = getIcon(item.type);
+                                const isRead = !!item.read;
+                                const bellColor = isRead ? UI_COLORS.mutedGrey : UI_COLORS.warningGold;
+                                const bellBg = isRead ? 'rgba(160, 174, 192, 0.12)' : 'rgba(245, 159, 0, 0.15)';
+
                                 return (
                                     <Swipeable
                                         renderRightActions={() => renderRightActions(item.id)}
@@ -193,18 +196,30 @@ export default function NotificationsScreen() {
                                         rightThreshold={40}
                                     >
                                         <TouchableOpacity 
-                                            style={[styles.notifCard, !item.read && styles.unreadCard]} 
                                             onPress={() => handleNotifPress(item)}
                                             activeOpacity={0.8}
+                                            style={styles.cardWrapper}
                                         >
-                                            <View style={[styles.iconCircle, { backgroundColor: icon.color + '20' }]}>
-                                                <Ionicons name={icon.name as any} size={22} color={icon.color} />
-                                            </View>
-                                            <View style={styles.textContainer}>
-                                                <Text style={[styles.notifTitle, !item.read && styles.boldText]}>{item.title}</Text>
-                                                <Text style={styles.notifMessage}>{item.message}</Text>
-                                            </View>
-                                            {!item.read && <View style={styles.unreadDot} />}
+                                            <BlurView 
+                                                intensity={isRead ? 45 : 85} 
+                                                tint="light" 
+                                                style={[styles.notifCard, !isRead && styles.unreadCard]}
+                                            >
+                                                <View style={[styles.iconCircle, { backgroundColor: bellBg }]}>
+                                                    <Ionicons 
+                                                        name={isRead ? "notifications-outline" : "notifications"} 
+                                                        size={22} 
+                                                        color={bellColor} 
+                                                    />
+                                                </View>
+                                                <View style={styles.textContainer}>
+                                                    <Text style={[styles.notifTitle, !isRead && styles.boldText]}>
+                                                        {item.title}
+                                                    </Text>
+                                                    <Text style={styles.notifMessage}>{item.message}</Text>
+                                                </View>
+                                                {!isRead && <View style={styles.unreadDot} />}
+                                            </BlurView>
                                         </TouchableOpacity>
                                     </Swipeable>
                                 );
@@ -229,27 +244,27 @@ const styles = StyleSheet.create({
     header: { 
         flexDirection: 'row', 
         justifyContent: 'space-between',
-        alignItems: 'center', // Centrare verticală optimă pentru toate elementele din header
+        alignItems: 'center', 
         paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'android' ? 25 : 10, // Ajustat padding-ul de sus pentru Android ca să nu fie prea aerian
+        paddingTop: Platform.OS === 'android' ? 25 : 10, 
         paddingBottom: 20
     },
     backBtn: { 
         width: 44, 
         height: 44, 
         borderRadius: 22, 
-        backgroundColor: 'rgba(255, 255, 255, 0.25)', 
+        backgroundColor: 'rgba(255, 255, 255, 0.5)', 
         justifyContent: 'center', 
         alignItems: 'center',
     },
     backIconFix: {
-        marginRight: 2 // Compensează optic iconița de „back” pentru a sta perfect pe centrul cercului
+        marginRight: 2 
     },
     clearAllBtn: {
         width: 44, 
         height: 44, 
         borderRadius: 22, 
-        backgroundColor: 'rgba(255, 255, 255, 0.25)', 
+        backgroundColor: 'rgba(255, 255, 255, 0.5)', 
         justifyContent: 'center', 
         alignItems: 'center',
     },
@@ -257,24 +272,24 @@ const styles = StyleSheet.create({
         fontSize: 24, 
         fontFamily: 'Poppins_700Bold', 
         color: UI_COLORS.brandSky,
-        includeFontPadding: false, // Scoate padding-ul nativ ciudat pe Android
+        includeFontPadding: false, 
         textAlignVertical: 'center'
     },
-    listContent: { padding: 20 },
+    listContent: { paddingHorizontal: 20, paddingVertical: 10 },
+    cardWrapper: { marginBottom: 15, borderRadius: 25, overflow: 'hidden' },
     notifCard: { 
         flexDirection: 'row', 
-        backgroundColor: 'rgba(255, 255, 255, 0.35)', 
-        borderRadius: 25, 
         padding: 16, 
-        marginBottom: 15, 
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.25)'
     },
+   
     unreadCard: { 
-        backgroundColor: 'rgba(255, 255, 255, 0.75)',
-        elevation: 6,
-        shadowColor: '#000',
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
+        elevation: 4,
+        shadowColor: '#1A365D',
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
         shadowOffset: { width: 0, height: 4 }
     },
     deleteButtonAction: {
@@ -282,16 +297,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         width: 70,
-        height: '83%', 
+        height: 82, 
         borderRadius: 25,
-        marginBottom: 15,
         marginLeft: 10
     },
-    boldText: { fontFamily: 'Poppins_700Bold', color: UI_COLORS.mainTitle },
+    boldText: { fontFamily: 'Poppins_700Bold' },
     iconCircle: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
     textContainer: { flex: 1 },
-    notifTitle: { fontSize: 15, fontFamily: 'Poppins_600SemiBold', color: UI_COLORS.mainTitle },
-    notifMessage: { fontSize: 13, fontFamily: 'Poppins_400Regular', color: UI_COLORS.description, marginTop: 2 },
+    notifTitle: { fontSize: 15, fontFamily: 'Poppins_600SemiBold', color: UI_COLORS.brandSky },
+    notifMessage: { fontSize: 13, fontFamily: 'Poppins_400Regular', color: UI_COLORS.description, marginTop: 3, opacity: 0.9, lineHeight: 18 },
     unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: UI_COLORS.brandSky, marginLeft: 10 },
     emptyContainer: { alignItems: 'center', marginTop: 150 },
     emptyText: { marginTop: 15, fontFamily: 'Poppins_600SemiBold', color: UI_COLORS.brandSky, opacity: 0.7 }

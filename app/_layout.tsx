@@ -15,16 +15,24 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
-        {/* Grupul principal de tab-uri */}
+        {}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         
-        {/* --- MODIFICARE AICI: Înregistrăm pagina de PDF --- */}
+        {}
+        <Stack.Screen 
+          name="active-swaps" 
+          options={{ 
+            headerShown: false 
+          }} 
+        />
+        
+        {}
         <Stack.Screen 
           name="receipt-details" 
           options={{ 
-            presentation: 'modal', // Se va deschide ca un pop-up frumos de jos în sus
+            presentation: 'modal', 
             title: 'Confirmare Plată',
-            headerShown: false // O lăsăm false pentru că avem design-ul nostru în pagină
+            headerShown: false 
           }} 
         />
         
