@@ -29,6 +29,9 @@ const UI_COLORS = {
     softBlue: '#A2D2FF',
     buttonBlue: '#6FB1FC',
     inputText: '#334155',
+    verifiedGreen: '#2ECC71',     
+    warningRed: '#E74C3C',         
+    statusLightBlue: '#6FB1FC'     
 };
 
 const LANGUAGES_SUPPORTED = [
@@ -87,7 +90,8 @@ export default function SettingsScreen() {
         zodiac: '',
         email: '',
         profileImage: '',
-        language: 'ro'
+        language: 'ro',
+        isVerified: false 
     });
 
     useLayoutEffect(() => {
@@ -119,7 +123,8 @@ export default function SettingsScreen() {
                             zodiac: data.zodiac || '',
                             email: user.email || '',
                             profileImage: data.profileImage || '',
-                            language: data.language || 'ro'
+                            language: data.language || 'ro',
+                            isVerified: data.isVerified || false 
                         });
                     }
                 } catch (error) {
@@ -237,6 +242,39 @@ export default function SettingsScreen() {
                         </TouchableOpacity>
                     </View>
 
+                    <View style={styles.verificationContainer}>
+                        <BlurView intensity={60} tint="light" style={styles.glassVerification}>
+                            <View style={styles.verificationInfo}>
+                                {/* Modificat: Culoarea dinamică în funcție de starea isVerified */}
+                                <Ionicons 
+                                    name={userData.isVerified ? "checkmark-circle" : "alert-circle"} 
+                                    size={28} 
+                                    color={userData.isVerified ? UI_COLORS.verifiedGreen : UI_COLORS.warningRed} 
+                                />
+                                <View style={styles.verificationTexts}>
+                                    <Text style={styles.verificationTitle}>
+                                        Status Identitate: {userData.isVerified ? 'Verificat' : 'Neverificat'}
+                                    </Text>
+                                    <Text style={styles.verificationDesc}>
+                                        {userData.isVerified 
+                                            ? 'Contul tău este complet securizat pentru schimb.' 
+                                            : 'Verifică-ți buletinul pentru a putea face schimburi.'}
+                                    </Text>
+                                </View>
+                            </View>
+                            
+                            {!userData.isVerified && (
+                                <TouchableOpacity 
+                                    style={styles.verifyButton} 
+                                    onPress={() => router.push('/identity-form' as any)}
+                                >
+                                    <Text style={styles.verifyButtonText}>Verifică acum</Text>
+                                    <Ionicons name="arrow-forward" size={14} color="#FFF" />
+                                </TouchableOpacity>
+                            )}
+                        </BlurView>
+                    </View>
+
                     <View style={styles.formContainer}>
                         
                         <Text style={styles.sectionTitle}>Limba preferată pentru chat</Text>
@@ -345,16 +383,23 @@ const styles = StyleSheet.create({
     backButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' },
     headerTitle: { fontSize: 22, fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },
     
-    // Avatar modificat (fără margini albe)
     avatarSection: { alignItems: 'center', marginBottom: 30 },
     avatarWrapper: { position: 'relative' },
     mainAvatar: { width: 110, height: 110, borderRadius: 55 }, 
     editBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: UI_COLORS.brandSky, width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF' },
     
+    verificationContainer: { marginBottom: 20, borderRadius: 16, overflow: 'hidden' },
+    glassVerification: { padding: 16, backgroundColor: 'rgba(255,255,255,0.3)', gap: 12 },
+    verificationInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    verificationTexts: { flex: 1 },
+    verificationTitle: { fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: UI_COLORS.statusLightBlue }, 
+    verificationDesc: { fontFamily: 'Poppins_400Regular', fontSize: 11, color: UI_COLORS.description, marginTop: 2 },
+    verifyButton: { backgroundColor: UI_COLORS.brandSky, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, alignSelf: 'flex-start' },
+    verifyButtonText: { color: '#FFF', fontFamily: 'Poppins_600SemiBold', fontSize: 12 },
+
     formContainer: { gap: 15 },
     sectionTitle: { fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: UI_COLORS.sectionLabel, marginTop: 5, marginBottom: 2 },
     
-    // Grid nou de limbi: aranjat pe 3 coloane egale (3 x 2)
     languageGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 10 },
     languageItem: { width: '31%', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12, backgroundColor: 'rgba(255, 255, 255, 0.4)', borderWidth: 1, borderColor: 'rgba(77, 171, 247, 0.1)', marginBottom: 10 },
     languageItemActive: { backgroundColor: UI_COLORS.brandSky, borderColor: UI_COLORS.brandSky },

@@ -54,7 +54,7 @@ export default function MenuScreen() {
     const [unreadNotifCount, setUnreadNotifCount] = useState(0);
     const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
-    // ✅ State-uri pentru widget statistici
+   
     const [completedSwaps, setCompletedSwaps] = useState(0);
     const [avgRating, setAvgRating] = useState<number | null>(null);
     const [citiesVisited, setCitiesVisited] = useState<string[]>([]);
@@ -147,7 +147,7 @@ export default function MenuScreen() {
                     );
                     setUnreadHistoryCount(finalizedUnseen.length);
 
-                    // ✅ Calculează statistici pentru widget
+                    
                     const completed = allReqs.filter((req: any) =>
                         req[`feedback_from_${req.ownerId}`] === true &&
                         req[`feedback_from_${req.senderId}`] === true

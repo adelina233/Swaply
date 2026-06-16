@@ -758,7 +758,7 @@ export default function ActiveSwapsScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Hero images — partenerul e tap-abil */}
+                {}
                 <View style={styles.heroSection}>
                     <View style={styles.aptBlock}>
                         <Image source={{ uri: myAptImg || 'https://via.placeholder.com/150' }} style={styles.heroImg} />

@@ -6,7 +6,7 @@ import { useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// Firebase imports
+
 import { collection, deleteDoc, doc, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 

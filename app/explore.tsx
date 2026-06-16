@@ -23,6 +23,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 // Firebase imports
 import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
@@ -32,6 +33,7 @@ const { width } = Dimensions.get('window');
 
 const UI_COLORS = {
   brandSky: '#4dabf7',
+  brandPink: '#FF4D6D',
   description: '#4A5568',
   inputText: '#334155',
   white: '#FFFFFF',
@@ -49,13 +51,15 @@ export default function ExploreScreen() {
   const [myApartment, setMyApartment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [selectedMapApartment, setSelectedMapApartment] = useState<any>(null);
+
   // filtrele
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [filterCity, setFilterCity] = useState('');
   const [minRating, setMinRating] = useState<number | null>(null);
   const [perfectMatchOnly, setPerfectMatchOnly] = useState(false);
 
- 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: false,
@@ -213,6 +217,30 @@ export default function ExploreScreen() {
     }
   };
 
+  const getInitialRegion = () => {
+    if (filteredApartments.length > 0) {
+      const firstAp = filteredApartments[0];
+      const lat = Number(firstAp.location?.latitude);
+      const lng = Number(firstAp.location?.longitude);
+      
+      if (!isNaN(lat) && !isNaN(lng)) {
+        return {
+          latitude: lat,
+          longitude: lng,
+          latitudeDelta: 0.15, 
+          longitudeDelta: 0.15,
+        };
+      }
+    }
+    
+    return {
+      latitude: 45.9432,
+      longitude: 24.9668,
+      latitudeDelta: 6.0,
+      longitudeDelta: 6.0,
+    };
+  };
+
   const renderHouse = ({ item }: { item: any }) => {
     const isFav = favorites.includes(item.id);
     const currentCity = item.addressInput?.split(',').pop()?.trim() || 'Locație...';
@@ -276,36 +304,118 @@ export default function ExploreScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
             <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} style={{ marginRight: 2 }} />
           </TouchableOpacity>
+          
           <Text style={styles.headerTitle}>Explorează</Text>
-          <TouchableOpacity onPress={() => setIsFilterVisible(true)} style={styles.iconBtn}>
-            <Ionicons name="options-outline" size={24} color={UI_COLORS.brandSky} />
-          </TouchableOpacity>
+          
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity 
+              onPress={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} 
+              style={styles.iconBtn}
+            >
+              <Ionicons name={viewMode === 'list' ? "map-outline" : "list-outline"} size={24} color={UI_COLORS.brandSky} />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => setIsFilterVisible(true)} style={styles.iconBtn}>
+              <Ionicons name="options-outline" size={24} color={UI_COLORS.brandSky} />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <FlatList
-          data={filteredApartments}
-          keyExtractor={(item) => item.id}
-          renderItem={renderHouse}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>Niciun rezultat găsit. ✨</Text>
-          }
-        />
+        {viewMode === 'list' ? (
+          <FlatList
+            data={filteredApartments}
+            keyExtractor={(item) => item.id}
+            renderItem={renderHouse}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>Niciun rezultat găsit. ✨</Text>
+            }
+          />
+        ) : (
+          <View style={styles.mapContainer}>
+            <MapView
+              provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+              style={StyleSheet.absoluteFillObject}
+              initialRegion={getInitialRegion()}
+              onPress={() => setSelectedMapApartment(null)}
+            >
+              {filteredApartments.map((ap) => {
+                const lat = Number(ap.location?.latitude);
+                const lng = Number(ap.location?.longitude);
+                
+                if (isNaN(lat) || isNaN(lng)) return null;
+
+                const isSelected = selectedMapApartment?.id === ap.id;
+
+                return (
+                  <Marker
+                    key={ap.id}
+                    coordinate={{ latitude: lat, longitude: lng }}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setSelectedMapApartment(ap);
+                    }}
+                  >
+                    <View style={[
+                      styles.minimalMarker,
+                      isSelected && styles.minimalMarkerSelected
+                    ]}>
+                      <Ionicons name="business" size={16} color="#FFF" />
+                    </View>
+                  </Marker>
+                );
+              })}
+            </MapView>
+
+            {selectedMapApartment && (
+              <View style={styles.previewContainer}>
+                <BlurView intensity={90} tint="light" style={styles.previewBlur}>
+                  <TouchableOpacity 
+                    style={styles.previewCard}
+                    onPress={() => router.push({ pathname: '/details', params: { id: selectedMapApartment.id } } as any)}
+                  >
+                    <Image
+                      source={selectedMapApartment.images && selectedMapApartment.images[0] ? selectedMapApartment.images[0] : 'https://via.placeholder.com/400'}
+                      style={styles.previewImage}
+                      contentFit="cover"
+                    />
+                    <View style={styles.previewDetails}>
+                      <Text style={styles.previewTitle} numberOfLines={1}>{selectedMapApartment.title || 'Locuință'}</Text>
+                      <Text style={styles.previewCity} numberOfLines={1}>
+                        📍 {selectedMapApartment.addressInput?.split(',').pop()?.trim() || 'Locație'}
+                      </Text>
+                      <Text style={styles.previewTarget} numberOfLines={1}>
+                        ✈️ Schimb cu: <Text style={{fontFamily: 'Poppins_600SemiBold', color: UI_COLORS.brandSky}}>{selectedMapApartment.targetCity || 'Oriunde'}</Text>
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={24} color={UI_COLORS.brandSky} style={{marginLeft: 5}} />
+                  </TouchableOpacity>
+                </BlurView>
+              </View>
+            )}
+          </View>
+        )}
 
         <Modal
-          animationType="fade"
+          animationType="slide"
           transparent={true}
           visible={isFilterVisible}
           onRequestClose={() => setIsFilterVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <BlurView intensity={30} tint="light" style={styles.modalBlurOverlay}>
+            <BlurView intensity={20} tint="dark" style={styles.modalBlurOverlay}>
+              {}
               <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                behavior={Platform.OS === "ios" ? "padding" : undefined}
                 style={styles.keyboardView}
               >
-                <View style={styles.modalContent}>
+                <LinearGradient
+                  colors={['rgba(255, 222, 233, 0.95)', 'rgba(181, 255, 252, 0.95)', 'rgba(224, 195, 252, 0.95)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modalContent}
+                >
                   <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>Filtre Inteligente</Text>
                     <TouchableOpacity onPress={() => setIsFilterVisible(false)} style={styles.closeBtn}>
@@ -313,12 +423,16 @@ export default function ExploreScreen() {
                     </TouchableOpacity>
                   </View>
 
-                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                  <ScrollView 
+                    showsVerticalScrollIndicator={false} 
+                    contentContainerStyle={{ paddingBottom: 20 }}
+                    keyboardShouldPersistTaps="handled"
+                  >
                     <Text style={styles.label}>Unde cauți?</Text>
                     <TextInput
                       style={styles.input}
                       placeholder="Orașul locuinței..."
-                      placeholderTextColor="rgba(77, 171, 247, 0.4)"
+                      placeholderTextColor="rgba(77, 171, 247, 0.5)"
                       value={filterCity}
                       onChangeText={setFilterCity}
                     />
@@ -344,7 +458,7 @@ export default function ExploreScreen() {
                       <Switch
                         value={perfectMatchOnly}
                         onValueChange={setPerfectMatchOnly}
-                        trackColor={{ false: "rgba(255,255,255,0.5)", true: UI_COLORS.brandSky }}
+                        trackColor={{ false: "rgba(0,0,0,0.1)", true: UI_COLORS.brandSky }}
                         thumbColor={perfectMatchOnly ? "#FFF" : "#f4f3f4"}
                       />
                     </View>
@@ -360,7 +474,7 @@ export default function ExploreScreen() {
                       </TouchableOpacity>
                     </View>
                   </ScrollView>
-                </View>
+                </LinearGradient>
               </KeyboardAvoidingView>
             </BlurView>
           </View>
@@ -375,21 +489,23 @@ const styles = StyleSheet.create({
   background: { ...StyleSheet.absoluteFillObject },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   safeArea: { flex: 1 },
+  
+  
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? 40 : 10,
-    marginBottom: 10
+    paddingBottom: 15,
+    zIndex: 10
   },
   headerTitle: { fontSize: 24, fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky },
-  // Laturile sunt acum egale și borderRadius formează un cerc perfect
   iconBtn: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     justifyContent: 'center',
     alignItems: 'center'
   },
@@ -429,39 +545,109 @@ const styles = StyleSheet.create({
   badge: { backgroundColor: 'rgba(77, 171, 247, 0.85)', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 15 },
   badgeText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 11 },
   emptyText: { textAlign: 'center', fontFamily: 'Poppins_600SemiBold', marginTop: 50, color: UI_COLORS.brandSky, fontSize: 16 },
+  
+  mapContainer: { flex: 1, overflow: 'hidden' },
+  minimalMarker: {
+    backgroundColor: '#4dabf7',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 }
+  },
+  minimalMarkerSelected: {
+    backgroundColor: '#FF4D6D',
+  },
+  previewContainer: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 40 : 20,
+    left: 20,
+    right: 20,
+    borderRadius: 24,
+    overflow: 'hidden',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 15,
+  },
+  previewBlur: {
+    padding: 12,
+  },
+  previewCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0'
+  },
+  previewDetails: {
+    flex: 1,
+    marginLeft: 14,
+    justifyContent: 'center'
+  },
+  previewTitle: {
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 15,
+    color: '#1A365D'
+  },
+  previewCity: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 12,
+    color: '#4A5568',
+    marginTop: 2
+  },
+  previewTarget: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 11,
+    color: '#718096',
+    marginTop: 4
+  },
+
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalBlurOverlay: { flex: 1, justifyContent: 'flex-end' },
+  modalBlurOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.2)' },
   keyboardView: { width: '100%' },
+  
   modalContent: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
     padding: 25,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 30
+    paddingBottom: Platform.OS === 'ios' ? 40 : 30,
+    overflow: 'hidden'
   },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontFamily: 'Poppins_700Bold', fontSize: 22, color: UI_COLORS.brandSky },
   closeBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   label: { fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: UI_COLORS.brandSky, marginTop: 15, marginBottom: 12 },
+  
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
     padding: 16,
     borderRadius: 20,
     fontFamily: 'Poppins_400Regular',
     color: UI_COLORS.mainTitle
   },
   ratingRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  
   ratingStarBtn: {
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-    borderWidth: 1,
-    borderColor: 'rgba(77,171,247,0.1)'
+    backgroundColor: 'rgba(255,255,255,0.5)'
   },
   activeStarBtn: { backgroundColor: UI_COLORS.brandSky },
   starBtnText: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, color: UI_COLORS.brandSky },
   activeStarText: { color: '#FFF' },
+  
   perfectMatchCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -469,21 +655,26 @@ const styles = StyleSheet.create({
     marginTop: 30,
     padding: 20,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)'
+    backgroundColor: 'rgba(255, 255, 255, 0.4)'
   },
   perfectMatchTitle: { fontFamily: 'Poppins_700Bold', fontSize: 16, color: UI_COLORS.brandSky },
   perfectMatchSub: { fontFamily: 'Poppins_400Regular', fontSize: 11, color: UI_COLORS.description, marginTop: 2 },
   modalButtons: { flexDirection: 'row', gap: 15, marginTop: 35 },
+  
   resetBtn: {
     flex: 1,
     padding: 18,
     borderRadius: 20,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(77, 171, 247, 0.2)'
+    borderColor: 'rgba(77, 171, 247, 0.35)'
   },
-  resetBtnText: { fontFamily: 'Poppins_700Bold', color: UI_COLORS.description },
+  resetBtnText: { 
+    fontFamily: 'Poppins_700Bold', 
+    color: UI_COLORS.brandSky
+  },
+  
   applyBtn: { flex: 2, borderRadius: 20, overflow: 'hidden' },
   applyGradient: { padding: 18, alignItems: 'center', justifyContent: 'center' },
   applyBtnText: { fontFamily: 'Poppins_700Bold', color: '#FFF', fontSize: 15 },

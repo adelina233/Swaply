@@ -32,22 +32,11 @@ const UI_COLORS = {
     white: '#FFFFFF',
     bookedText: '#c0392b',
     bookedDot: '#e74c3c',
+    warning: '#f59f00',
+    warningBg: 'rgba(245, 159, 0, 0.1)',
 };
 
 const CURRENCIES = ['RON', 'EUR', 'USD'];
-
-// Randare custom pentru ziua de calendar
-const renderBookedDay = (date: any, state: string, isBooked: boolean, isSelected: boolean) => {
-    if (isBooked) {
-        return (
-            <View style={customDayStyles.bookedContainer}>
-                <Text style={customDayStyles.bookedText}>{date.day}</Text>
-                <View style={customDayStyles.bookedDot} />
-            </View>
-        );
-    }
-    return null; //renderul default
-};
 
 export default function CreateOfferScreen() {
     const { targetId } = useLocalSearchParams();
@@ -58,6 +47,10 @@ export default function CreateOfferScreen() {
     const [myApartments, setMyApartments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
+
+    // ── VERIFICARE IDENTITATE ──
+    const [isVerified, setIsVerified] = useState<boolean | null>(null);
+    const [showVerifyModal, setShowVerifyModal] = useState(false);
     
     const [range, setRange] = useState({ start: '', end: '' });
     const [guarantee, setGuarantee] = useState('500');
@@ -102,6 +95,19 @@ export default function CreateOfferScreen() {
     useEffect(() => {
         const fetchData = async () => {
             try {
+            
+                const user = auth.currentUser;
+                if (user) {
+                    const userRef = doc(db, "users", user.uid);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const userData = userSnap.data();
+                        setIsVerified(userData?.isVerified === true);
+                    } else {
+                        setIsVerified(false);
+                    }
+                }
+
                 const targetRef = doc(db, "apartments", targetId as string);
                 const targetSnap = await getDoc(targetRef);
                 if (targetSnap.exists()) {
@@ -137,7 +143,6 @@ export default function CreateOfferScreen() {
 
                         while (current <= end) {
                             const dateStr = current.toISOString().split('T')[0];
-                        
                             blocked[dateStr] = {
                                 disabled: true,
                                 disableTouchEvent: true,
@@ -268,16 +273,13 @@ export default function CreateOfferScreen() {
         }
     };
 
-    
     const buildMarkedDatesCustom = () => {
         const marked: {[key: string]: any} = {};
 
-        // Zilele bookuite — text tăiat + bilută roșie
         Object.keys(bookedDates).forEach(dateStr => {
             marked[dateStr] = { ...bookedDates[dateStr] };
         });
 
-       
         if (range.start) {
             if (range.end) {
                 const start = new Date(range.start);
@@ -323,88 +325,14 @@ export default function CreateOfferScreen() {
         return marked;
     };
 
-  
-    const buildMarkedDates = () => {
-        const marked: {[key: string]: any} = {};
-
-        Object.keys(bookedDates).forEach(dateStr => {
-            marked[dateStr] = { ...bookedDates[dateStr] };
-        });
-
-        if (range.start) {
-            if (range.end) {
-                const start = new Date(range.start);
-                const end = new Date(range.end);
-                const current = new Date(start);
-
-                while (current <= end) {
-                    const dateStr = current.toISOString().split('T')[0];
-                    if (!bookedDates[dateStr]) {
-                        if (dateStr === range.start) {
-                            marked[dateStr] = { startingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' };
-                        } else if (dateStr === range.end) {
-                            marked[dateStr] = { endingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' };
-                        } else {
-                            marked[dateStr] = { color: 'rgba(77, 171, 247, 0.25)', textColor: UI_COLORS.brandSky };
-                        }
-                    }
-                    current.setDate(current.getDate() + 1);
-                }
-            } else {
-                if (!bookedDates[range.start]) {
-                    marked[range.start] = { startingDay: true, endingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' };
-                }
-            }
-        }
-
-        return marked;
-    };
-
-    
-    const buildMarkedDatesPeriod = () => {
-        const marked: {[key: string]: any} = {};
-
-        Object.keys(bookedDates).forEach(dateStr => {
-            marked[dateStr] = {
-                disabled: true,
-                disableTouchEvent: true,
-                startingDay: true,
-                endingDay: true,
-                color: 'rgba(229, 115, 115, 0.15)',
-                textColor: '#e57373',
-            };
-        });
-
-        if (range.start) {
-            if (range.end) {
-                const start = new Date(range.start);
-                const end = new Date(range.end);
-                const current = new Date(start);
-
-                while (current <= end) {
-                    const dateStr = current.toISOString().split('T')[0];
-                    if (!bookedDates[dateStr]) {
-                        if (dateStr === range.start) {
-                            marked[dateStr] = { startingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' };
-                        } else if (dateStr === range.end) {
-                            marked[dateStr] = { endingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' };
-                        } else {
-                            marked[dateStr] = { color: 'rgba(77, 171, 247, 0.22)', textColor: UI_COLORS.brandSky };
-                        }
-                    }
-                    current.setDate(current.getDate() + 1);
-                }
-            } else {
-                if (!bookedDates[range.start]) {
-                    marked[range.start] = { startingDay: true, endingDay: true, color: UI_COLORS.brandSky, textColor: '#FFF' };
-                }
-            }
-        }
-
-        return marked;
-    };
-
+   
     const handleConfirmOffer = async () => {
+        // Blocăm dacă userul nu e verificat
+        if (!isVerified) {
+            setShowVerifyModal(true);
+            return;
+        }
+
         if (!range.start || !range.end) {
             Alert.alert("Eroare", "Selectează perioada schimbului.");
             return;
@@ -482,6 +410,21 @@ export default function CreateOfferScreen() {
                 </View>
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+
+                    {/* ── Banner avertizare cont neverificat ── */}
+                    {isVerified === false && (
+                        <TouchableOpacity
+                            style={styles.verifyBanner}
+                            onPress={() => router.push('/identity-form')}
+                            activeOpacity={0.8}
+                        >
+                            <Ionicons name="warning-outline" size={18} color={UI_COLORS.warning} />
+                            <Text style={styles.verifyBannerText}>
+                                Identitatea ta nu este verificată. Apasă pentru a o verifica.
+                            </Text>
+                            <Ionicons name="chevron-forward" size={16} color={UI_COLORS.warning} />
+                        </TouchableOpacity>
+                    )}
                     
                     <View style={styles.comparisonCard}>
                         <View style={styles.homeBox}>
@@ -600,14 +543,34 @@ export default function CreateOfferScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirmOffer} disabled={sending}>
-                        <LinearGradient colors={['#A2D2FF', '#6FB1FC']} style={styles.gradientBtn}>
-                            {sending ? <ActivityIndicator color="#FFF" /> : <Text style={styles.confirmBtnText}>Trimite Propunerea</Text>}
+                    <TouchableOpacity
+                        style={[styles.confirmBtn, isVerified === false && styles.confirmBtnDisabled]}
+                        onPress={handleConfirmOffer}
+                        disabled={sending}
+                        activeOpacity={0.8}
+                    >
+                        <LinearGradient
+                            colors={isVerified === false ? ['#ccc', '#bbb'] : ['#A2D2FF', '#6FB1FC']}
+                            style={styles.gradientBtn}
+                        >
+                            {sending ? (
+                                <ActivityIndicator color="#FFF" />
+                            ) : (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                    {isVerified === false && (
+                                        <Ionicons name="lock-closed" size={16} color="#FFF" />
+                                    )}
+                                    <Text style={styles.confirmBtnText}>
+                                        {isVerified === false ? 'Verificare necesară' : 'Trimite Propunerea'}
+                                    </Text>
+                                </View>
+                            )}
                         </LinearGradient>
                     </TouchableOpacity>
                 </ScrollView>
             </SafeAreaView>
 
+            {/* ── Modal valută ── */}
             <Modal transparent visible={showCurrencyModal} animationType="fade">
                 <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowCurrencyModal(false)}>
                     <BlurView intensity={90} tint="dark" style={styles.modalContent}>
@@ -619,33 +582,42 @@ export default function CreateOfferScreen() {
                     </BlurView>
                 </TouchableOpacity>
             </Modal>
+
+            {/* ── Modal verificare identitate ── */}
+            <Modal transparent visible={showVerifyModal} animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <BlurView intensity={80} tint="light" style={styles.verifyModalContent}>
+                        <View style={styles.verifyIconCircle}>
+                            <Ionicons name="shield-outline" size={36} color={UI_COLORS.warning} />
+                        </View>
+                        <Text style={styles.verifyModalTitle}>Cont neverificat</Text>
+                        <Text style={styles.verifyModalDesc}>
+                            Pentru a trimite o propunere de schimb, trebuie să îți verifici identitatea cu datele din buletin.
+                        </Text>
+                        <TouchableOpacity
+                            style={styles.verifyModalBtn}
+                            onPress={() => {
+                                setShowVerifyModal(false);
+                                router.push('/identity-form');
+                            }}
+                        >
+                            <LinearGradient colors={['#f59f00', '#f08c00']} style={styles.verifyModalBtnGradient}>
+                                <Ionicons name="card-outline" size={18} color="#FFF" />
+                                <Text style={styles.verifyModalBtnText}>Verifică identitatea</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.verifyModalCancel}
+                            onPress={() => setShowVerifyModal(false)}
+                        >
+                            <Text style={styles.verifyModalCancelText}>Anulează</Text>
+                        </TouchableOpacity>
+                    </BlurView>
+                </View>
+            </Modal>
         </View>
     );
 }
-
-const customDayStyles = StyleSheet.create({
-    bookedContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 32,
-        height: 32,
-    },
-    bookedText: {
-        fontSize: 13,
-        color: '#e57373',
-        opacity: 0.6,
-        textDecorationLine: 'line-through',
-        fontFamily: 'Poppins_400Regular',
-    },
-    bookedDot: {
-        width: 4,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: '#e57373',
-        opacity: 0.5,
-        marginTop: 1,
-    },
-});
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
@@ -655,6 +627,28 @@ const styles = StyleSheet.create({
     headerTitle: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: UI_COLORS.brandSky },
     backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.6)', justifyContent: 'center', alignItems: 'center' },
     scrollContent: { padding: 25 },
+
+    // ── Banner avertizare ──
+    verifyBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: 'rgba(245, 159, 0, 0.12)',
+        borderWidth: 1,
+        borderColor: 'rgba(245, 159, 0, 0.3)',
+        borderRadius: 16,
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        marginBottom: 20,
+    },
+    verifyBannerText: {
+        flex: 1,
+        fontFamily: 'Poppins_400Regular',
+        fontSize: 12,
+        color: UI_COLORS.warning,
+        lineHeight: 18,
+    },
+
     comparisonCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30, backgroundColor: 'rgba(255,255,255,0.3)', padding: 15, borderRadius: 25 },
     homeBox: { alignItems: 'center', flex: 1 },
     miniImg: { width: '90%', height: 80, borderRadius: 15, marginBottom: 8 },
@@ -689,14 +683,6 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         backgroundColor: UI_COLORS.brandSky,
     },
-    legendDotFree: {
-        width: 10,
-        height: 10,
-        borderRadius: 3,
-        backgroundColor: 'rgba(77, 171, 247, 0.2)',
-        borderWidth: 1,
-        borderColor: 'rgba(77, 171, 247, 0.4)',
-    },
     legendText: { fontFamily: 'Poppins_400Regular', fontSize: 11, color: UI_COLORS.subText },
     aiLoading: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 15, justifyContent: 'center' },
     aiText: { fontFamily: 'Poppins_400Regular', fontSize: 12, color: UI_COLORS.brandSky },
@@ -711,12 +697,76 @@ const styles = StyleSheet.create({
     currencyGlass: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.4)' },
     currencyText: { fontFamily: 'Poppins_700Bold', fontSize: 16, color: UI_COLORS.brandSky },
     confirmBtn: { marginTop: 30, borderRadius: 20, overflow: 'hidden', elevation: 5 },
+    confirmBtnDisabled: { opacity: 0.7, elevation: 0 },
     gradientBtn: { paddingVertical: 18, alignItems: 'center' },
     confirmBtnText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 16 },
     modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
     modalContent: { width: 200, borderRadius: 25, overflow: 'hidden', padding: 10 },
     currencyOption: { paddingVertical: 15, alignItems: 'center' },
     optionText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 18 },
+
+    // ── Modal verificare identitate ──
+    verifyModalContent: {
+        width: width * 0.85,
+        borderRadius: 30,
+        overflow: 'hidden',
+        padding: 30,
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.85)',
+    },
+    verifyIconCircle: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: 'rgba(245, 159, 0, 0.12)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 18,
+        borderWidth: 1,
+        borderColor: 'rgba(245, 159, 0, 0.25)',
+    },
+    verifyModalTitle: {
+        fontFamily: 'Poppins_700Bold',
+        fontSize: 18,
+        color: UI_COLORS.mainTitle,
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    verifyModalDesc: {
+        fontFamily: 'Poppins_400Regular',
+        fontSize: 13,
+        color: UI_COLORS.subText,
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: 24,
+    },
+    verifyModalBtn: {
+        width: '100%',
+        borderRadius: 16,
+        overflow: 'hidden',
+        marginBottom: 12,
+    },
+    verifyModalBtnGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 15,
+    },
+    verifyModalBtnText: {
+        color: '#FFF',
+        fontFamily: 'Poppins_700Bold',
+        fontSize: 15,
+    },
+    verifyModalCancel: {
+        paddingVertical: 10,
+    },
+    verifyModalCancelText: {
+        fontFamily: 'Poppins_400Regular',
+        fontSize: 13,
+        color: UI_COLORS.subText,
+    },
+
     aptSelectorScroll: { marginTop: 10, width: '100%' },
     aptSelectorContent: { gap: 8, paddingHorizontal: 4 },
     aptThumb: {
