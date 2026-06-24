@@ -327,7 +327,7 @@ export default function CreateOfferScreen() {
 
    
     const handleConfirmOffer = async () => {
-        // Blocăm dacă userul nu e verificat
+        
         if (!isVerified) {
             setShowVerifyModal(true);
             return;
@@ -570,7 +570,7 @@ export default function CreateOfferScreen() {
                 </ScrollView>
             </SafeAreaView>
 
-            {/* ── Modal valută ── */}
+            {}
             <Modal transparent visible={showCurrencyModal} animationType="fade">
                 <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowCurrencyModal(false)}>
                     <BlurView intensity={90} tint="dark" style={styles.modalContent}>
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
     backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.6)', justifyContent: 'center', alignItems: 'center' },
     scrollContent: { padding: 25 },
 
-    // ── Banner avertizare ──
+    
     verifyBanner: {
         flexDirection: 'row',
         alignItems: 'center',

@@ -24,7 +24,7 @@ const UI_COLORS = {
     brandSky: '#4dabf7',
     mainTitle: '#1A365D',
     description: '#4A5568',
-    successText: '#10b981', // Verde smarald modern
+    successText: '#10b981', 
     successPastel: 'rgba(16, 185, 129, 0.15)', 
     appGradient: ['#FFDEE9', '#B5FFFC', '#E0C3FC'] as const
 };

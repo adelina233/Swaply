@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -39,7 +40,11 @@ const UI_COLORS = {
   white: '#FFFFFF',
   softBlue: '#A2D2FF',
   mainTitle: '#1A365D',
-  starGold: '#FFD700'
+  starGold: '#FFD700',
+  palePink: '#FADCE4',
+  pinkIcon: '#ff85a1',
+  softGradient: ['rgba(255, 222, 233, 0.4)', 'rgba(181, 255, 252, 0.4)', 'rgba(224, 195, 252, 0.4)'] as const,
+  aiGradient: ['#4dabf7', '#E0C3FC'] as const,
 };
 
 export default function ExploreScreen() {
@@ -59,6 +64,19 @@ export default function ExploreScreen() {
   const [filterCity, setFilterCity] = useState('');
   const [minRating, setMinRating] = useState<number | null>(null);
   const [perfectMatchOnly, setPerfectMatchOnly] = useState(false);
+
+  // ── Modal autentificare necesară ──
+  const [loginAlertModal, setLoginAlertModal] = useState(false);
+  const [loginAlertFeature, setLoginAlertFeature] = useState('');
+
+  const requireLogin = (featureName: string, action: () => void) => {
+    if (!auth.currentUser) {
+      setLoginAlertFeature(featureName);
+      setLoginAlertModal(true);
+    } else {
+      action();
+    }
+  };
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -181,7 +199,8 @@ export default function ExploreScreen() {
 
   const toggleFavorite = async (apartment: any) => {
     if (!auth.currentUser) {
-      Alert.alert("Autentificare", "Trebuie să fii logat pentru a salva favorite!");
+      setLoginAlertFeature('salva favorite');
+      setLoginAlertModal(true);
       return;
     }
 
@@ -217,6 +236,13 @@ export default function ExploreScreen() {
     }
   };
 
+  // ── Navigare spre detalii, doar dacă userul e logat ──
+  const handleOpenDetails = (apartmentId: string) => {
+    requireLogin('vedea detaliile unei locuințe', () => {
+      router.push({ pathname: '/details', params: { id: apartmentId } } as any);
+    });
+  };
+
   const getInitialRegion = () => {
     if (filteredApartments.length > 0) {
       const firstAp = filteredApartments[0];
@@ -250,7 +276,7 @@ export default function ExploreScreen() {
       <TouchableOpacity
         style={styles.houseCard}
         activeOpacity={0.9}
-        onPress={() => router.push({ pathname: '/details', params: { id: item.id } } as any)}
+        onPress={() => handleOpenDetails(item.id)}
       >
         <Image
           source={item.images && item.images[0] ? item.images[0] : 'https://via.placeholder.com/400'}
@@ -373,7 +399,7 @@ export default function ExploreScreen() {
                 <BlurView intensity={90} tint="light" style={styles.previewBlur}>
                   <TouchableOpacity 
                     style={styles.previewCard}
-                    onPress={() => router.push({ pathname: '/details', params: { id: selectedMapApartment.id } } as any)}
+                    onPress={() => handleOpenDetails(selectedMapApartment.id)}
                   >
                     <Image
                       source={selectedMapApartment.images && selectedMapApartment.images[0] ? selectedMapApartment.images[0] : 'https://via.placeholder.com/400'}
@@ -478,6 +504,43 @@ export default function ExploreScreen() {
               </KeyboardAvoidingView>
             </BlurView>
           </View>
+        </Modal>
+
+        {/* ── Modal autentificare necesară ── */}
+        <Modal visible={loginAlertModal} transparent animationType="fade">
+          <Pressable style={styles.loginAlertOverlay} onPress={() => setLoginAlertModal(false)}>
+            <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />
+            <View style={styles.loginAlertContainer}>
+              <LinearGradient colors={UI_COLORS.softGradient} style={StyleSheet.absoluteFill} />
+              <BlurView intensity={25} tint="light" style={styles.loginAlertGlass}>
+                <View style={styles.loginAlertContent}>
+                  <View style={styles.loginAlertIconWrap}>
+                    <Ionicons name="lock-closed" size={30} color={UI_COLORS.pinkIcon} />
+                  </View>
+                  <Text style={styles.loginAlertTitle}>Cont necesar</Text>
+                  <Text style={styles.loginAlertSub}>
+                    Trebuie să fii autentificat pentru a putea {loginAlertFeature}.
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.loginAlertBtn}
+                  onPress={() => { setLoginAlertModal(false); router.push('/auth'); }}
+                >
+                  <LinearGradient colors={UI_COLORS.aiGradient} style={styles.loginAlertBtnGradient}>
+                    <Text style={styles.loginAlertBtnText}>Autentifică-te</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.loginAlertCancel}
+                  onPress={() => setLoginAlertModal(false)}
+                >
+                  <Text style={styles.loginAlertCancelText}>Înapoi</Text>
+                </TouchableOpacity>
+              </BlurView>
+            </View>
+          </Pressable>
         </Modal>
       </SafeAreaView>
     </View>
@@ -678,4 +741,18 @@ const styles = StyleSheet.create({
   applyBtn: { flex: 2, borderRadius: 20, overflow: 'hidden' },
   applyGradient: { padding: 18, alignItems: 'center', justifyContent: 'center' },
   applyBtnText: { fontFamily: 'Poppins_700Bold', color: '#FFF', fontSize: 15 },
+
+  
+  loginAlertOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
+  loginAlertContainer: { width: '100%', borderRadius: 30, overflow: 'hidden', backgroundColor: 'transparent', elevation: 10 },
+  loginAlertGlass: { borderRadius: 30, padding: 25 },
+  loginAlertContent: { alignItems: 'center', marginBottom: 24 },
+  loginAlertIconWrap: { width: 64, height: 64, borderRadius: 22, backgroundColor: UI_COLORS.palePink, justifyContent: 'center', alignItems: 'center', marginBottom: 14 },
+  loginAlertTitle: { fontFamily: 'Poppins_700Bold', fontSize: 20, color: UI_COLORS.brandSky, marginBottom: 8, textAlign: 'center' },
+  loginAlertSub: { fontFamily: 'Poppins_400Regular', fontSize: 14, color: UI_COLORS.description, textAlign: 'center', lineHeight: 22 },
+  loginAlertBtn: { borderRadius: 18, overflow: 'hidden', marginBottom: 10 },
+  loginAlertBtnGradient: { paddingVertical: 15, alignItems: 'center', borderRadius: 18 },
+  loginAlertBtnText: { color: '#FFF', fontFamily: 'Poppins_600SemiBold', fontSize: 16 },
+  loginAlertCancel: { paddingVertical: 12, alignItems: 'center' },
+  loginAlertCancelText: { color: UI_COLORS.description, fontFamily: 'Poppins_400Regular', fontSize: 14 },
 });

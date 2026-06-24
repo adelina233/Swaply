@@ -43,12 +43,12 @@ export default function IdentityFormScreen() {
     const [documentSeries, setDocumentSeries] = useState('');
     const [address, setAddress] = useState('');
 
-    // Referințe pentru controlul focusului tastaturii
+    
     const cnpInputRef = useRef<TextInput>(null);
     const seriesInputRef = useRef<TextInput>(null);
     const addressInputRef = useRef<TextInput>(null);
 
-    // ASCUNDE BARA NEAGRĂ/HEADER-UL IMPLICIT AL NAVIGATORULUI DE TABS
+    
     useLayoutEffect(() => {
         navigation.setOptions({
             headerShown: false,
@@ -172,7 +172,7 @@ export default function IdentityFormScreen() {
                             if (!auth.currentUser) return;
                             const currentUserId = auth.currentUser.uid;
                             
-                            // 1. Salvare permanentă în documentul global al utilizatorului
+                           
                             const userRef = doc(db, "users", currentUserId);
                             await updateDoc(userRef, {
                                 isVerified: true,
@@ -185,7 +185,7 @@ export default function IdentityFormScreen() {
                                 }
                             });
                             
-                            // 2. Salvare adițională în cererea de schimb (dacă flow-ul vine dintr-un swap existent)
+                            
                             if (swapId) {
                                 const swapRef = doc(db, "swap_requests", swapId);
                                 await updateDoc(swapRef, {

@@ -245,7 +245,7 @@ export default function SettingsScreen() {
                     <View style={styles.verificationContainer}>
                         <BlurView intensity={60} tint="light" style={styles.glassVerification}>
                             <View style={styles.verificationInfo}>
-                                {/* Modificat: Culoarea dinamică în funcție de starea isVerified */}
+                                {}
                                 <Ionicons 
                                     name={userData.isVerified ? "checkmark-circle" : "alert-circle"} 
                                     size={28} 

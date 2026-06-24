@@ -379,7 +379,7 @@ export default function MenuScreen() {
                 </TouchableOpacity>
             )}
 
-            {/* ✅ MODAL STATISTICI */}
+            {}
             <Modal visible={statsModal} transparent animationType="slide">
                 <Pressable style={styles.statsOverlay} onPress={() => setStatsModal(false)}>
                     <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />

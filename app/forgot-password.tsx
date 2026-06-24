@@ -2,8 +2,8 @@ import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } fr
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useRouter } from 'expo-router'; // Adăugat useNavigation și Stack
-import React, { useLayoutEffect, useState } from 'react'; // Adăugat useLayoutEffect
+import { useNavigation, useRouter } from 'expo-router';
+import React, { useLayoutEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -70,7 +70,7 @@ export default function ForgotPasswordScreen() {
     const [loading, setLoading] = useState(false);
     const [emailSent, setEmailSent] = useState(false);
 
-    // Ascundere sincronă a barierii negre din Expo Router înainte ca layout-ul să fie desenat
+   
     useLayoutEffect(() => {
         navigation.setOptions({
             headerShown: false,
