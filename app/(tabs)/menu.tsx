@@ -236,7 +236,7 @@ export default function MenuScreen() {
             <SafeAreaView style={styles.safeArea}>
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-                    {/* HEADER */}
+                    {}
                     <View style={styles.header}>
                         <View>
                             <Text style={styles.welcomeBack}>Bună,</Text>
@@ -270,7 +270,7 @@ export default function MenuScreen() {
                         </View>
                     </View>
 
-                    {/* Locuințele tale */}
+                    {}
                     {isLoggedIn && myAds.length > 0 && (
                         <View style={styles.myAdsSection}>
                             <Text style={styles.sectionTitleBrand}>Locuințele tale</Text>
@@ -290,7 +290,7 @@ export default function MenuScreen() {
 
 
 
-                    {/* BENTO CARDS */}
+                    {}
                     <View style={styles.bentoContainer}>
                         <Pressable style={styles.cardLargeGlass} onPress={() => router.push('/explore')}>
                             <View style={styles.cardContent}>
@@ -432,7 +432,7 @@ export default function MenuScreen() {
                 </View>
             </Modal>
 
-            {/* AI HUB */}
+            {}
             <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.aiWrapper}>
                 {aiHubVisible && (
                     <View style={styles.hubContainer}>
@@ -571,7 +571,7 @@ export default function MenuScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { ...StyleSheet.absoluteFillObject },
-    safeArea: { flex: 1 },
+    safeArea: { flex: 1, backgroundColor: 'transparent' },
     scrollContent: { padding: 25 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: 15 },

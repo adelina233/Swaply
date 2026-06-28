@@ -100,7 +100,7 @@ export default function ReceiptDetailsScreen() {
         <View style={styles.container}>
             <LinearGradient colors={['#FFDEE9', '#B5FFFC', '#E0C3FC']} style={styles.background} />
             <SafeAreaView style={{ flex: 1 }}>
-                {/* Header cu buton de iesire transparent */}
+                {}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                         <Ionicons name="chevron-back" size={24} color={UI_COLORS.brandSky} />
@@ -111,7 +111,7 @@ export default function ReceiptDetailsScreen() {
 
                 <View style={styles.cardWrapper}>
                     <BlurView intensity={90} tint="light" style={styles.card}>
-                        {/* Iconita plutitoare, fara cerc gri in spate */}
+                        {}
                         <View style={styles.iconCircle}>
                             <Ionicons name="shield-checkmark" size={50} color={UI_COLORS.brandSky} />
                         </View>
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     background: { ...StyleSheet.absoluteFillObject },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10 },
-    // Modificat: S-a eliminat fundalul alb si elevation pentru un aspect complet transparent
+    
     backBtn: { width: 44, height: 44, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
     headerTitle: { fontSize: 18, fontWeight: '800' },
     cardWrapper: { padding: 25, flex: 1, justifyContent: 'center' },
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
         elevation: 5,
         overflow: 'hidden'
     },
-    // Modificat: Fundalul gri a fost sters, lasand logo-ul curat pe sticla mata (BlurView)
+    
     iconCircle: { width: 80, height: 80, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
     successTitle: { fontSize: 24, fontWeight: '900', color: UI_COLORS.brandSky, marginBottom: 5 },
     swapIdText: { fontSize: 10, color: '#94A3B8', fontWeight: 'bold' },
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     infoBox: { width: '100%', gap: 15 },
     infoRow: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     label: { color: '#64748B', fontSize: 13, fontWeight: '500' },
-    // Modificat: Nou stil pentru a afisa valorile cu albastru stralucitor
+   
     blueValue: { color: '#4dabf7', fontWeight: '700', fontSize: 14 },
     amountValue: { color: UI_COLORS.brandSky, fontWeight: '900', fontSize: 17 },
     proPdfBtn: { width: '100%', height: 55, borderRadius: 20, overflow: 'hidden', marginTop: 30 },

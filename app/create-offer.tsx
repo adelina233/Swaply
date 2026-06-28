@@ -48,7 +48,7 @@ export default function CreateOfferScreen() {
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
 
-    // ── VERIFICARE IDENTITATE ──
+    
     const [isVerified, setIsVerified] = useState<boolean | null>(null);
     const [showVerifyModal, setShowVerifyModal] = useState(false);
     
@@ -383,7 +383,7 @@ export default function CreateOfferScreen() {
                 createdAt: serverTimestamp(),
             });
 
-            Alert.alert("Succes", "Propunerea a fost trimisă!", [{ text: "OK", onPress: () => router.replace('/') }]);
+            Alert.alert("Succes", "Propunerea a fost trimisă!", [{ text: "OK", onPress: () => router.replace('/menu') }]);
         } catch (e) {
             console.error(e);
             Alert.alert("Eroare", "Eroare la trimitere.");
@@ -411,7 +411,7 @@ export default function CreateOfferScreen() {
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-                    {/* ── Banner avertizare cont neverificat ── */}
+                    {}
                     {isVerified === false && (
                         <TouchableOpacity
                             style={styles.verifyBanner}
@@ -583,7 +583,7 @@ export default function CreateOfferScreen() {
                 </TouchableOpacity>
             </Modal>
 
-            {/* ── Modal verificare identitate ── */}
+            {}
             <Modal transparent visible={showVerifyModal} animationType="fade">
                 <View style={styles.modalOverlay}>
                     <BlurView intensity={80} tint="light" style={styles.verifyModalContent}>

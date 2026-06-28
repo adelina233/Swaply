@@ -298,7 +298,7 @@ export default function ChatScreen() {
             <LinearGradient colors={['#FFDEE9', '#B5FFFC', '#E0C3FC']} style={styles.background} />
             <SafeAreaView style={{ flex: 1 }}>
                 
-                {/* HEADER */}
+                {}
                 <BlurView intensity={30} tint="light" style={styles.header}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                         <Ionicons name="chevron-back" size={26} color={UI_COLORS.brandSky} />

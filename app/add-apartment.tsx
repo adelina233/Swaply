@@ -54,7 +54,7 @@ const FloatingInput = ({ label, value, onChangeText, placeholder, multiline = fa
                     {label}
                 </Text>
                 <TextInput
-                    style={[styles.textInput, isFloating && { paddingTop: 18 }, multiline && { textAlignVertical: 'top' }]}
+                    style={[styles.textInput, multiline && { textAlignVertical: 'top' }]}
                     value={value}
                     onChangeText={onChangeText}
                     onFocus={() => setIsFocused(true)}
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     label: { position: 'absolute', left: 18, fontFamily: 'Poppins_400Regular' },
     labelNormal: { fontSize: 14, color: UI_COLORS.description, top: 22 },
     labelFloating: { fontSize: 11, color: UI_COLORS.brandSky, top: 10, fontFamily: 'Poppins_600SemiBold' },
-    textInput: { fontSize: 15, color: UI_COLORS.inputText, fontFamily: 'Poppins_400Regular', height: '100%', width: '100%' },
+    textInput: { fontSize: 15, color: UI_COLORS.inputText, fontFamily: 'Poppins_400Regular', height: '100%', width: '100%', paddingTop: 18 },
     searchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, gap: 10 },
     searchBarGlass: { flex: 1, height: 60, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', overflow: 'hidden', flexDirection: 'row', alignItems: 'center' },
     searchInput: { flex: 1, fontFamily: 'Poppins_400Regular', fontSize: 14, paddingHorizontal: 12, color: UI_COLORS.inputText },

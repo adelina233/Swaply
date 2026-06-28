@@ -203,7 +203,6 @@ export default function SettingsScreen() {
                 });
                 
                 Alert.alert("Succes", "Profil actualizat!");
-                router.back();
             }
         } catch (error) {
             Alert.alert("Eroare", "Salvare eșuată.");

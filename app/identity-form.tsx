@@ -129,7 +129,7 @@ export default function IdentityFormScreen() {
             return;
         }
 
-        // REPARAT: Validare Matematică CNP Românesc stabilă
+        
         const validateCNP = (cnpStr: string) => {
             if (!/^\d{13}$/.test(cnpStr)) return false;
             

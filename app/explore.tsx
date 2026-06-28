@@ -65,7 +65,7 @@ export default function ExploreScreen() {
   const [minRating, setMinRating] = useState<number | null>(null);
   const [perfectMatchOnly, setPerfectMatchOnly] = useState(false);
 
-  // ── Modal autentificare necesară ──
+ 
   const [loginAlertModal, setLoginAlertModal] = useState(false);
   const [loginAlertFeature, setLoginAlertFeature] = useState('');
 
@@ -236,7 +236,7 @@ export default function ExploreScreen() {
     }
   };
 
-  // ── Navigare spre detalii, doar dacă userul e logat ──
+  
   const handleOpenDetails = (apartmentId: string) => {
     requireLogin('vedea detaliile unei locuințe', () => {
       router.push({ pathname: '/details', params: { id: apartmentId } } as any);
@@ -506,7 +506,7 @@ export default function ExploreScreen() {
           </View>
         </Modal>
 
-        {/* ── Modal autentificare necesară ── */}
+        {}
         <Modal visible={loginAlertModal} transparent animationType="fade">
           <Pressable style={styles.loginAlertOverlay} onPress={() => setLoginAlertModal(false)}>
             <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />
