@@ -2,9 +2,9 @@ import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } fr
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -41,6 +41,14 @@ const CURRENCIES = ['RON', 'EUR', 'USD'];
 export default function CreateOfferScreen() {
     const { targetId } = useLocalSearchParams();
     const router = useRouter();
+    const navigation = useNavigation();
+
+    
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerShown: false,
+        });
+    }, [navigation]);
     
     const [targetApartment, setTargetApartment] = useState<any>(null);
     const [myApartment, setMyApartment] = useState<any>(null);
@@ -48,7 +56,6 @@ export default function CreateOfferScreen() {
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
 
-    
     const [isVerified, setIsVerified] = useState<boolean | null>(null);
     const [showVerifyModal, setShowVerifyModal] = useState(false);
     
@@ -95,7 +102,6 @@ export default function CreateOfferScreen() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-            
                 const user = auth.currentUser;
                 if (user) {
                     const userRef = doc(db, "users", user.uid);
@@ -325,9 +331,7 @@ export default function CreateOfferScreen() {
         return marked;
     };
 
-   
     const handleConfirmOffer = async () => {
-        
         if (!isVerified) {
             setShowVerifyModal(true);
             return;
@@ -383,7 +387,13 @@ export default function CreateOfferScreen() {
                 createdAt: serverTimestamp(),
             });
 
-            Alert.alert("Succes", "Propunerea a fost trimisă!", [{ text: "OK", onPress: () => router.replace('/menu') }]);
+            Alert.alert("Succes", "Propunerea a fost trimisă!", [{ 
+    text: "OK", 
+    onPress: () => {
+        router.dismissAll(); 
+        router.push('/menu'); 
+    } 
+}]);
         } catch (e) {
             console.error(e);
             Alert.alert("Eroare", "Eroare la trimitere.");
@@ -411,7 +421,6 @@ export default function CreateOfferScreen() {
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-                    {}
                     {isVerified === false && (
                         <TouchableOpacity
                             style={styles.verifyBanner}
@@ -570,7 +579,6 @@ export default function CreateOfferScreen() {
                 </ScrollView>
             </SafeAreaView>
 
-            {}
             <Modal transparent visible={showCurrencyModal} animationType="fade">
                 <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowCurrencyModal(false)}>
                     <BlurView intensity={90} tint="dark" style={styles.modalContent}>
@@ -583,7 +591,6 @@ export default function CreateOfferScreen() {
                 </TouchableOpacity>
             </Modal>
 
-            {}
             <Modal transparent visible={showVerifyModal} animationType="fade">
                 <View style={styles.modalOverlay}>
                     <BlurView intensity={80} tint="light" style={styles.verifyModalContent}>
@@ -628,7 +635,6 @@ const styles = StyleSheet.create({
     backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.6)', justifyContent: 'center', alignItems: 'center' },
     scrollContent: { padding: 25 },
 
-    
     verifyBanner: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -705,7 +711,6 @@ const styles = StyleSheet.create({
     currencyOption: { paddingVertical: 15, alignItems: 'center' },
     optionText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 18 },
 
-    // ── Modal verificare identitate ──
     verifyModalContent: {
         width: width * 0.85,
         borderRadius: 30,

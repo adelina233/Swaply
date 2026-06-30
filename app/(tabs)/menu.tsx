@@ -154,7 +154,7 @@ export default function MenuScreen() {
                     );
                     setCompletedSwaps(completed.length);
 
-                    // Orașe vizitate unice
+                   
                     const cities = new Set<string>();
                     allReqs.forEach((req: any) => {
                         if (req.ownerId === user.uid && req.targetCity) cities.add(req.targetCity);

@@ -61,7 +61,6 @@ export default function DetailsScreen() {
     const router = useRouter();
     const navigation = useNavigation();
 
-   
     useLayoutEffect(() => {
         navigation.setOptions({ headerShown: false });
     }, [navigation]);
@@ -343,9 +342,19 @@ export default function DetailsScreen() {
                 lastMessageTimestamp: serverTimestamp(),
                 lastSenderId: currentUid,
                 readBy: [currentUid],
+                contextApartmentId: id as string,
+                contextApartmentTitle: apartment.title || 'Apartament',
+                contextApartmentImage: apartment.images?.[0] || null,
             }, { merge: true });
 
-            router.push(`/${chatId}`);
+            router.push({
+                pathname: `/${chatId}`,
+                params: {
+                    contextAptTitle: apartment.title || 'Apartament',
+                    contextAptImage: apartment.images?.[0] || '',
+                    contextAptId: id as string,
+                }
+            } as any);
         } catch (e) {
             console.error("Chat Error:", e);
             Alert.alert("Eroare", "Nu s-a putut deschide conversația.");
@@ -561,7 +570,6 @@ export default function DetailsScreen() {
                 <BlurView intensity={100} tint="light" style={styles.bottomBar}>
                     <View style={styles.actionContainer}>
 
-                        {}
                         <TouchableOpacity
                             style={styles.btnWrapper}
                             onPress={() => handleAction('chat')}
@@ -585,7 +593,6 @@ export default function DetailsScreen() {
                             </LinearGradient>
                         </TouchableOpacity>
 
-                        {}
                         <TouchableOpacity
                             style={[styles.secondaryBtn, !hasMyApartment && styles.secondaryBtnDisabled]}
                             onPress={() => handleAction('swap')}
@@ -612,9 +619,9 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { ...StyleSheet.absoluteFillObject },
     loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    heroContainer: { height: 440 },
-    cityBannerWrapper: { height: 160, width: '100%', position: 'relative', overflow: 'hidden' },
-    cityBannerImage: { width: '100%', height: 160 },
+    heroContainer: { height: 480 },
+    cityBannerWrapper: { height: 200, width: '100%', position: 'relative', overflow: 'hidden' },
+    cityBannerImage: { width: '100%', height: 200 },
     cityBadgeLabel: { position: 'absolute', bottom: 15, left: 20, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 5 },
     cityBadgeText: { color: '#FFF', fontFamily: 'Poppins_600SemiBold', fontSize: 13 },
     apartmentSlider: { marginTop: -20, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' },
@@ -629,7 +636,7 @@ const styles = StyleSheet.create({
     locationText: { fontFamily: 'Poppins_400Regular', color: UI_COLORS.description, fontSize: 13, marginLeft: 5 },
     sizeBadge: { backgroundColor: 'rgba(77, 171, 247, 0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 15, height: 38 },
     sizeText: { fontFamily: 'Poppins_700Bold', color: UI_COLORS.brandSky, fontSize: 14 },
-    poiContainer: { padding: 15, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' },
+    poiContainer: { padding: 15, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', marginBottom: 20 },
     routingInfoBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.7)', padding: 10, borderRadius: 12, marginBottom: 12 },
     routingInfoText: { fontFamily: 'Poppins_600SemiBold', fontSize: 13, color: UI_COLORS.brandSky, marginLeft: 8 },
     poiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
@@ -637,7 +644,7 @@ const styles = StyleSheet.create({
     poiLabel: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, color: UI_COLORS.brandSky },
     poiDistance: { fontFamily: 'Poppins_400Regular', fontSize: 11, color: UI_COLORS.description },
     ownerProfileRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.3)', padding: 12, borderRadius: 20 },
-    ownerAvatar: { width: 45, height: 45, borderRadius: 22.5, marginRight: 12, borderWidth: 1, borderColor: '#fff' },
+    ownerAvatar: { width: 45, height: 45, borderRadius: 22.5, marginRight: 12 },
     ownerLabel: { fontSize: 10, fontFamily: 'Poppins_400Regular', color: UI_COLORS.description },
     ownerName: { fontSize: 15, fontFamily: 'Poppins_600SemiBold', color: UI_COLORS.brandSky },
     ownerNotice: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(77, 171, 247, 0.1)', padding: 12, borderRadius: 15, marginBottom: 20 },

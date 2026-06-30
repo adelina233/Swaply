@@ -17,7 +17,6 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-// Importuri necesare pentru Swipe
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import { auth, db } from '../firebaseConfig';
 
@@ -34,11 +33,10 @@ const UI_COLORS = {
 
 export default function ChatsListScreen() {
     const router = useRouter();
-    const navigation = useNavigation(); // Inițializare navigație nativă
+    const navigation = useNavigation(); 
     const [chats, setChats] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    
     useLayoutEffect(() => {
         navigation.setOptions({
             headerShown: false,
@@ -124,6 +122,8 @@ export default function ChatsListScreen() {
         const partnerName = item.participantNames?.[partnerId] || "Utilizator";
         const partnerPhoto = item.participantPhotos?.[partnerId];
         const isUnread = item.lastSenderId !== auth.currentUser?.uid && !item.readBy?.includes(auth.currentUser?.uid);
+        const contextImage = item.contextApartmentImage;
+        const contextId = item.contextApartmentId;
 
         return (
             <Swipeable
@@ -145,6 +145,15 @@ export default function ChatsListScreen() {
                                 </View>
                             )}
                             {isUnread && <View style={styles.unreadDot} />}
+
+                            {contextImage && (
+                                <TouchableOpacity
+                                    style={styles.contextThumbWrapper}
+                                    onPress={() => contextId && router.push({ pathname: '/details', params: { id: contextId } } as any)}
+                                >
+                                    <Image source={{ uri: contextImage }} style={styles.contextThumb} />
+                                </TouchableOpacity>
+                            )}
                         </View>
 
                         <View style={styles.chatInfo}>
@@ -233,6 +242,8 @@ const styles = StyleSheet.create({
     avatar: { width: 55, height: 55, borderRadius: 20 },
     placeholderAvatar: { width: 55, height: 55, borderRadius: 20, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center' },
     unreadDot: { position: 'absolute', top: -2, right: -2, width: 14, height: 14, borderRadius: 7, backgroundColor: '#FF4D6D', borderWidth: 2, borderColor: '#FFF' },
+    contextThumbWrapper: { position: 'absolute', bottom: -6, right: -6, borderRadius: 10, overflow: 'hidden' },
+    contextThumb: { width: 26, height: 26, borderRadius: 10, borderWidth: 2, borderColor: '#FFF' },
     chatInfo: { flex: 1, marginLeft: 15, marginRight: 5 },
     chatHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
     partnerName: { fontSize: 16, fontFamily: 'Poppins_600SemiBold', color: UI_COLORS.brandSky },
